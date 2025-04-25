@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "IPC_Demo (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "IPC_Demo (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

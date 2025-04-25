@@ -1,0 +1,17 @@
+[
+  {
+    "Name": "Multi Launch",
+    "Projects": [
+      {
+        "Path": "Server\\IPC_Demo.csproj",
+        "Action": "Start",
+        "DebugTarget": "IPC_Demo (Unpackaged)"
+      },
+      {
+        "Path": "Client\\Client.csproj",
+        "Action": "StartWithoutDebugging",
+        "DebugTarget": "Client"
+      }
+    ]
+  }
+]
