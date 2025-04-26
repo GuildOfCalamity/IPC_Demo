@@ -29,7 +29,7 @@
             Background="Transparent"
             BorderBrush="{ThemeResource GradientTabBrush}"
             CanDragTabs="False"
-            CanReorderTabs="False"
+            CanReorderTabs="True"
             CornerRadius="5"
             IsAddTabButtonVisible="False">
             <TabView.Resources>

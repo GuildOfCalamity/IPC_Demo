@@ -120,7 +120,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                 {
                     /** Tab 3 (connection history) **/
 
-                    if (_tab3Messages.Count == 0)
+                    if (tvi3.Header != null && tvi3.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
                         tvi3.Header = $"Connections";
                     else if (_tab3Messages.Count > _maxMessages)
                         _tab3Messages.RemoveAt(_maxMessages);
@@ -163,7 +163,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
                                 tsf.Text = $"Received msg #{++_total}";
 
-                                if (_tab1Messages.Count == 0)
+                                if (tvi1.Header != null && tvi1.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
                                     tvi1.Header = $"{jmsg.Sender}";
                                 else if (_tab1Messages.Count > _maxMessages)
                                     _tab1Messages.RemoveAt(_maxMessages);
@@ -185,7 +185,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                             {
                                 /** Tab 2 (failed security check) **/
 
-                                if (_tab2Messages.Count == 0)
+                                if (tvi2.Header != null && tvi2.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
                                     tvi2.Header = $"{jmsg.Sender}";
                                 else if (_tab2Messages.Count > _maxMessages)
                                     _tab2Messages.RemoveAt(_maxMessages);
