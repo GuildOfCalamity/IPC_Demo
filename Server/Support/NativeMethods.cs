@@ -409,6 +409,9 @@ internal static class NativeMethods
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     public static extern bool FreeLibrary(IntPtr hModule);
 
+    [DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
+    public static extern int GetCursorPos(out Windows.Graphics.PointInt32 lpPoint);
+
     public static string[] CommandLineToArgvW(string cmdLine)
     {
         IntPtr argv = IntPtr.Zero;

@@ -63,10 +63,7 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
     int windowStartX = 0;
     int windowStartY = 0;
     bool isMoving = false;
-    Microsoft.UI.Windowing.AppWindow appW;
-
-    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
-    internal static extern int GetCursorPos(out Windows.Graphics.PointInt32 lpPoint);
+    public static Microsoft.UI.Windowing.AppWindow appW;
     #endregion
 
     public MainWindow()
@@ -323,13 +320,13 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         Debug.WriteLine($"[INFO] {((Grid)sender).Name} PointerPressed");
         ((UIElement)sender).CapturePointer(e.Pointer);
         var currentPoint = e.GetCurrentPoint((UIElement)sender);
-        if (currentPoint.Properties.IsLeftButtonPressed)
+        if (currentPoint.Properties.IsLeftButtonPressed && appW != null)
         {
             ((UIElement)sender).CapturePointer(e.Pointer);
             windowStartX = appW.Position.X;
             windowStartY = appW.Position.Y;
             Windows.Graphics.PointInt32 pt;
-            GetCursorPos(out pt); // user32.dll
+            NativeMethods.GetCursorPos(out pt); // user32.dll
             initialPointerX = pt.X;
             initialPointerY = pt.Y;
             isMoving = true;
@@ -367,8 +364,8 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         if (currentPoint.Properties.IsLeftButtonPressed)
         {
             Windows.Graphics.PointInt32 pt;
-            GetCursorPos(out pt);
-            if (isMoving)
+            NativeMethods.GetCursorPos(out pt);
+            if (isMoving && appW != null)
                 appW.Move(new Windows.Graphics.PointInt32(windowStartX + (pt.X - initialPointerX), windowStartY + (pt.Y - initialPointerY)));
         }
     }

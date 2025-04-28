@@ -11,7 +11,7 @@ public class IpcMessage
     public string Payload { get; set; } = string.Empty;
     public string Time { get; set; } = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ"); // JSON date-time format
     public string Sender { get; set; } = Environment.MachineName;
-    public string Secret { get; set; } = string.Empty;
+    public string Secret { get; set; } = string.Empty; // HMAC key
 
     public override string ToString()
     {

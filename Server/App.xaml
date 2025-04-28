@@ -55,10 +55,10 @@
             <Color x:Key="TitleColor2">#B0B0B0</Color>
             <Color x:Key="TitleColor3">#909090</Color>
             <Color x:Key="TitleColor4">#707070</Color>
-            <Color x:Key="LinearBorder1">#5F66BCFF</Color>
-            <Color x:Key="LinearBorder2">#5F4E91C4</Color>
-            <Color x:Key="LinearBorder3">#5F3F769E</Color>
-            <Color x:Key="LinearBorder4">#5F1E384C</Color>
+            <Color x:Key="LinearBorder1">#BF66BCFF</Color>
+            <Color x:Key="LinearBorder2">#BF4E91C4</Color>
+            <Color x:Key="LinearBorder3">#BF3F769E</Color>
+            <Color x:Key="LinearBorder4">#BF1E384C</Color>
             <Color x:Key="LinearBorder5">#BF66BCFF</Color>
             <Color x:Key="LinearBorder6">#BF4E91C4</Color>
             <Color x:Key="LinearBorder7">#BF3F769E</Color>
@@ -71,6 +71,17 @@
             <Color x:Key="AlphaShadow2">#F0161616</Color>
             <Color x:Key="AlphaShadow3">#F0090909</Color>
             <Color x:Key="AlphaShadow4">#F0000000</Color>
+            <Color x:Key="ColorFrom">#FF4800FF</Color>
+            <Color x:Key="ColorTo">#FF10FFFF</Color>
+            <Color x:Key="Step1">#ff4800FF</Color>
+            <Color x:Key="Step2">#fff0f0f0</Color>
+            <Color x:Key="DialogShadow">#FFF4F4F4</Color>
+            <Color x:Key="TitleShadow">#FF66BCFF</Color>
+            <Color x:Key="RingColor">#AF66BCFF</Color>
+            <Color x:Key="TabBorder1">#AF6800FF</Color>
+            <Color x:Key="TabBorder2">#AF370096</Color>
+            <Color x:Key="TabBorder3">#AF7770FF</Color>
+            <Color x:Key="TabBorder4">#AF464399</Color>
             <Color x:Key="GC1">#36192E3D</Color>
             <Color x:Key="GC2">#36335F7F</Color>
             <Color x:Key="GC3">#364E91C4</Color>
@@ -79,16 +90,10 @@
             <Color x:Key="BC2">#364800FF</Color>
             <Color x:Key="BC3">#36FFD800</Color>
             <Color x:Key="BC4">#36FF6A00</Color>
-            <Color x:Key="ColorFrom">#FF4800FF</Color>
-            <Color x:Key="ColorTo">#FF10FFFF</Color>
-            <Color x:Key="Step1">#ff4800FF</Color>
-            <Color x:Key="Step2">#fff0f0f0</Color>
-            <Color x:Key="DialogShadow">#FFF4F4F4</Color>
-            <Color x:Key="TitleShadow">#FF66BCFF</Color>
-            <Color x:Key="TabBorder1">#AF6800FF</Color>
-            <Color x:Key="TabBorder2">#AF370096</Color>
-            <Color x:Key="TabBorder3">#AF7770FF</Color>
-            <Color x:Key="TabBorder4">#AF464399</Color>
+            <Color x:Key="StatusBrush">#6f6f7f</Color>
+            <Color x:Key="CodesBrush">#a6a6a7</Color>
+            <Color x:Key="CloseButtonBrushPointerOver">#50FF2F05</Color>
+            <Color x:Key="CloseButtonBrushPointerPressed">#C0FF2F05</Color>
             <!--#endregion-->
 
             <!--#region [Brushes]-->
@@ -104,10 +109,6 @@
             <Brush x:Key="TertiaryBrush">#94d446</Brush>
             <Brush x:Key="QuaternaryBrush">#dc7d5e</Brush>
             <Brush x:Key="SelectedBrush">#3976B9ED</Brush>
-            <Color x:Key="StatusBrush">#6f6f7f</Color>
-            <Color x:Key="CodesBrush">#a6a6a7</Color>
-            <Color x:Key="CloseButtonBrushPointerOver">#50FF2F05</Color>
-            <Color x:Key="CloseButtonBrushPointerPressed">#C0FF2F05</Color>
             <SolidColorBrush
                 x:Key="CustomTextBoxBackground"
                 Opacity="0.8"

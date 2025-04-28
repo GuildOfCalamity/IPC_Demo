@@ -16,10 +16,26 @@
             Margin="50"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
-            Opacity="0.11"
-            Source="/Assets/Background10.png"
+            Opacity="0.1"
+            Source="/Assets/Background14.png"
             Stretch="Uniform" />
         <!--#endregion-->
+
+        <ProgressRing
+            Width="100"
+            Height="100"
+            Margin="0,-50,0,0"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Background="Transparent"
+            BorderThickness="0"
+            Foreground="{StaticResource RingColor}"
+            IsActive="True"
+            Visibility="{x:Bind IsBusy, Mode=OneWay, Converter={StaticResource BooleanVisibility}, ConverterParameter=False}">
+            <ProgressRing.RenderTransform>
+                <ScaleTransform CenterX="0.5" CenterY="0.5" ScaleX="1" ScaleY="1" />
+            </ProgressRing.RenderTransform>
+        </ProgressRing>
 
         <!--#region [IPC using TabView]-->
         <TabView
@@ -27,11 +43,15 @@
             VerticalAlignment="Stretch"
             AllowDropTabs="False"
             Background="Transparent"
-            BorderBrush="{ThemeResource GradientTabBrush}"
+            BorderBrush="{ThemeResource GradientHeaderBrush}"
+            BorderThickness="0"
             CanDragTabs="False"
-            CanReorderTabs="True"
+            CanReorderTabs="False"
             CornerRadius="5"
-            IsAddTabButtonVisible="False">
+            IsAddTabButtonVisible="False"
+            PointerMoved="UIElement_PointerMoved"
+            PointerPressed="UIElement_PointerPressed"
+            PointerReleased="UIElement_PointerReleased">
             <TabView.Resources>
                 <Thickness x:Key="TabViewButtonBorderThickness">1</Thickness>
                 <SolidColorBrush x:Key="TabViewItemHeaderBackgroundPointerOver" Color="#3F5FB2F2" />
@@ -63,8 +83,31 @@
             </TabView.TabStripHeader>
             <TabView.TabStripFooter>
                 <Grid MinWidth="200" Background="Transparent">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="40" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Image
+                        x:Name="imgLED_on"
+                        Grid.Column="0"
+                        Width="30"
+                        Height="30"
+                        Margin="-1"
+                        Source="/Assets/LED_on.png"
+                        Stretch="Fill"
+                        Visibility="Collapsed" />
+                    <Image
+                        x:Name="imgLED_off"
+                        Grid.Column="0"
+                        Width="30"
+                        Height="30"
+                        Margin="-1"
+                        Source="/Assets/LED_off.png"
+                        Stretch="Fill"
+                        Visibility="Visible" />
                     <TextBlock
                         x:Name="tsf"
+                        Grid.Column="1"
                         Margin="10,4,0,0"
                         VerticalAlignment="Center"
                         FontSize="{StaticResource FontSizeSmall}"
@@ -112,7 +155,11 @@
                             </ListView.Transitions>
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="local:ApplicationMessage">
-                                    <Grid Margin="0,3,0,3">
+                                    <Grid
+                                        Margin="0,3,0,3"
+                                        PointerMoved="UIElement_PointerMoved"
+                                        PointerPressed="UIElement_PointerPressed"
+                                        PointerReleased="UIElement_PointerReleased">
                                         <Grid.RowDefinitions>
                                             <RowDefinition />
                                             <RowDefinition />
@@ -205,7 +252,11 @@
                             </ListView.Transitions>
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="local:ApplicationMessage">
-                                    <Grid Margin="0,3,0,3">
+                                    <Grid
+                                        Margin="0,3,0,3"
+                                        PointerMoved="UIElement_PointerMoved"
+                                        PointerPressed="UIElement_PointerPressed"
+                                        PointerReleased="UIElement_PointerReleased">
                                         <Grid.RowDefinitions>
                                             <RowDefinition />
                                             <RowDefinition />
@@ -300,7 +351,11 @@
                             </ListView.Transitions>
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="local:ApplicationMessage">
-                                    <Grid Margin="0,3,0,3">
+                                    <Grid
+                                        Margin="0,3,0,3"
+                                        PointerMoved="UIElement_PointerMoved"
+                                        PointerPressed="UIElement_PointerPressed"
+                                        PointerReleased="UIElement_PointerReleased">
                                         <Grid.RowDefinitions>
                                             <RowDefinition />
                                             <RowDefinition />

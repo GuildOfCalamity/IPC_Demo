@@ -23,7 +23,7 @@ public class IpcClient
         {
             Type = type ?? string.Empty,
             Payload = payload ?? string.Empty,
-            Secret = Shared.SecurityHelper.GenerateSecureCode(secret),
+            Secret = Shared.SecurityHelper.GenerateSecureCode6(secret),
             //Time = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ") // JSON date-time format
             //Time = DateTime.UtcNow.ToString("o") // ISO 8601 format
         });
@@ -41,7 +41,7 @@ public class IpcClient
                 Console.WriteLine($"⚠️ SocketException: {ex.Message}");
                 if (++SocketErrors > 3)
                 {
-                    Console.WriteLine($"🚨 Socket errors exceeded limit, exiting.");
+                    Console.WriteLine($"{Environment.NewLine}🚨 Socket errors exceeded limit - Exiting 🚨{Environment.NewLine}");
                     Environment.Exit(1);
                 }
             }
@@ -50,7 +50,7 @@ public class IpcClient
                 Console.WriteLine($"⚠️ IOException: {ex.Message}");
                 if (++IOErrors > 3)
                 {
-                    Console.WriteLine($"🚨 I/O errors exceeded limit, exiting.");
+                    Console.WriteLine($"{Environment.NewLine}🚨 I/O errors exceeded limit - Exiting 🚨{Environment.NewLine}");
                     Environment.Exit(1);
                 }
             }

@@ -58,6 +58,17 @@ public static class Extensions
     }
 
     /// <summary>
+    /// Calculates the number of minutes remaining in the current hour.
+    /// </summary>
+    /// <returns>number of minutes remaining in the current hour</returns>
+    public static int MinutesRemainingInCurrentHour()
+    {
+        DateTime now = DateTime.Now;
+        int minutesPassed = now.Minute;
+        return 60 - minutesPassed;
+    }
+
+    /// <summary>
     /// Home-brew parallel invoke that will block while actions run.
     /// </summary>
     /// <param name="actions">array of <see cref="Action"/>s</param>

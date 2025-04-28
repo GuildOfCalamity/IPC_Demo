@@ -16,8 +16,10 @@ using System.Threading.Tasks;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
+using Shared;
 
 namespace IPC_Demo;
 
@@ -27,15 +29,21 @@ namespace IPC_Demo;
 public sealed partial class MainPage : Page, INotifyPropertyChanged
 {
     #region [Properties]
+    /// <summary>
+    /// Server and client must share this secret.
+    /// Don't hard-code this as I have, this is just an example demo.
+    /// </summary>
+    string _secret { get; set; } = "9hOfBy7beK0x3zX4";
+
+    IpcHelper? ipcServer = null;
     int _total = 0;
     bool _loaded = false;
-    string _secret = "HeavyMetal";
+    bool _toggle = false;
     readonly int _maxMessages = 50;
     readonly ObservableCollection<ApplicationMessage>? _tab1Messages;
     readonly ObservableCollection<ApplicationMessage>? _tab2Messages;
     readonly ObservableCollection<ApplicationMessage>? _tab3Messages;
     public event PropertyChangedEventHandler? PropertyChanged;
-    IpcHelper? ipcServer = null;
     
     bool _isBusy = false;
     public bool IsBusy
@@ -52,11 +60,20 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     }
     #endregion
 
+    #region [Dragging Props]
+    bool isMoving = false;
+    int windowStartX = 0;
+    int initialPointerX = 0;
+    int windowStartY = 0;
+    int initialPointerY = 0;
+    #endregion
+
     public MainPage()
     {
         this.InitializeComponent();
         this.Loaded += IpcPageOnLoaded;
         this.Unloaded += IpcPageOnUnloaded;
+
         try
         {
             // We could change this to dynamically create a tab when a new client
@@ -111,127 +128,164 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
             #region [Setup IPC and events]
             ipcServer = new IpcHelper(port: 32000);
-
-            // --= Message received event =--
-            ipcServer.MessageReceived += (msg) =>
-            {
-                Debug.WriteLine($"Received 📨 {msg}");
-                this.DispatcherQueue.TryEnqueue(() => 
-                {
-                    /** Tab 3 (connection history) **/
-
-                    if (tvi3.Header != null && tvi3.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
-                        tvi3.Header = $"Connections";
-                    else if (_tab3Messages.Count > _maxMessages)
-                        _tab3Messages.RemoveAt(_maxMessages);
-
-                    var obj = JsonSerializer.Deserialize<Shared.IpcMessage>(msg);
-                    if (obj != null)
-                    {
-                        var dict = ipcServer.GetConnectionHistory();
-                        foreach (var item in dict)
-                        {
-                            var conMsg = new ApplicationMessage
-                            {
-                                Module = ModuleId.IPC_Client,
-                                MessagePayload = $"{item.Key}",
-                                MessageText = $"💻 {item.Key}    ⌚ {item.Value}    ⏱️ {obj.Time}",
-                                MessageType = typeof(Shared.IpcMessage),
-                                MessageTime = item.Value,
-                            };
-                            //if (_tab3Messages.Count != dict.Count)
-                            _tab3Messages?.Insert(0, conMsg);
-                        }
-                    }
-                });
-            };
-
-            // --= JSON message received event =--
-            ipcServer.JsonMessageReceived += (jmsg) =>
-            {
-                if (_loaded && jmsg != null)
-                {
-                    // Check if it's a message from us by us.
-                    if (!string.IsNullOrEmpty(jmsg.Sender) && jmsg.Sender == Environment.MachineName)
-                    {
-                        // Security check
-                        if (Shared.SecurityHelper.VerifySecureCode(jmsg.Secret, _secret))
-                        {
-                            this.DispatcherQueue.TryEnqueue(() =>
-                            {
-                                /** Tab 1 (message details) **/
-
-                                tsf.Text = $"Received msg #{++_total}";
-
-                                if (tvi1.Header != null && tvi1.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
-                                    tvi1.Header = $"{jmsg.Sender}";
-                                else if (_tab1Messages.Count > _maxMessages)
-                                    _tab1Messages.RemoveAt(_maxMessages);
-
-                                var appMsg = new ApplicationMessage
-                                {
-                                    Module = ModuleId.IPC_Passed,
-                                    MessagePayload = jmsg,
-                                    MessageText = $"{jmsg}",
-                                    MessageType = typeof(Shared.IpcMessage),
-                                    MessageTime = jmsg.Time.ParseJsonDateTime(),
-                                };
-                                _tab1Messages?.Insert(0, appMsg);
-                            });
-                        }
-                        else
-                        {
-                            this.DispatcherQueue.TryEnqueue(() =>
-                            {
-                                /** Tab 2 (failed security check) **/
-
-                                if (tvi2.Header != null && tvi2.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
-                                    tvi2.Header = $"{jmsg.Sender}";
-                                else if (_tab2Messages.Count > _maxMessages)
-                                    _tab2Messages.RemoveAt(_maxMessages);
-
-                                var appMsg = new ApplicationMessage
-                                {
-                                    Module = ModuleId.IPC_Failed,
-                                    MessagePayload = jmsg,
-                                    MessageText = $"{jmsg}",
-                                    MessageType = typeof(Shared.IpcMessage),
-                                    MessageTime = jmsg.Time.ParseJsonDateTime(),
-                                };
-                                _tab2Messages?.Insert(0, appMsg);
-                            });
-                        }
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"⚠ Disallowed/Unknown sender '{jmsg.Sender}'");
-                    }
-                }
-                else
-                    Debug.WriteLine($"JSON 📨 {jmsg}");
-            };
-
-            // --= Server error event =--
-            ipcServer.ErrorOccurred += (err) =>
-            {
-                Debug.WriteLine($"⚠ Server: {err.Message}");
-            };
+            ipcServer.MessageReceived += IpcServer_MessageReceived;
+            ipcServer.JsonMessageReceived += IpcServer_JsonMessageReceived;
+            ipcServer.ErrorOccurred += IpcServer_ErrorOccurred;
             ipcServer.Start();
             #endregion
         }
         _loaded = true;
 
-        var workingCode = Shared.SecurityHelper.GenerateSecureCode(_secret);
-        UpdateInfoBar($"Secure code for the next hour will be {workingCode}", MessageLevel.Information);
+        var workingCode = Shared.SecurityHelper.GenerateSecureCode6(_secret);
+        UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}", MessageLevel.Information);
+    }
+
+    /// <summary>
+    /// Server error event
+    /// </summary>
+    /// <param name="err"><see cref="Exception"/></param>
+    void IpcServer_ErrorOccurred(Exception err)
+    {
+        if (_loaded)
+            UpdateInfoBar($"Server Error: {err.Message}", MessageLevel.Error);
+        else
+            Debug.WriteLine($"⚠ Server Error: {err.Message}");
+    }
+
+    /// <summary>
+    /// JSON message received event
+    /// </summary>
+    /// <param name="jmsg"><see cref="IpcMessage"/></param>
+    void IpcServer_JsonMessageReceived(IpcMessage jmsg)
+    {
+        if (_loaded && jmsg != null)
+        {
+            // Check if it's a message from us by us.
+            if (!string.IsNullOrEmpty(jmsg.Sender) && jmsg.Sender == Environment.MachineName)
+            {
+                if (_toggle)
+                {
+                    _toggle = false;
+                    imgLED_off.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        // Setting the source causes a flicker.
+                        //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED_off.png"));
+                        imgLED_on.Visibility = Visibility.Collapsed; 
+                        imgLED_off.Visibility = Visibility.Visible;
+                    });
+                }
+                else
+                {
+                    _toggle = true;
+                    imgLED_on.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        // Setting the source causes a flicker.
+                        //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED_on.png"));
+                        imgLED_on.Visibility = Visibility.Visible;
+                        imgLED_off.Visibility = Visibility.Collapsed;
+                    });
+                }
+
+                // Security check
+                if (Shared.SecurityHelper.VerifySecureCode6(jmsg.Secret, _secret))
+                {
+                    this.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        /** Tab 1 (message details) **/
+
+                        tsf.Text = $"Received msg #{++_total}";
+
+                        if (tvi1.Header != null && tvi1.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
+                            tvi1.Header = $"{jmsg.Sender}";
+                        else if (_tab1Messages.Count > _maxMessages)
+                            _tab1Messages.RemoveAt(_maxMessages);
+
+                        var appMsg = new ApplicationMessage
+                        {
+                            Module = ModuleId.IPC_Passed,
+                            MessagePayload = jmsg,
+                            MessageText = $"{jmsg}",
+                            MessageType = typeof(Shared.IpcMessage),
+                            MessageTime = jmsg.Time.ParseJsonDateTime(),
+                        };
+                        _tab1Messages?.Insert(0, appMsg);
+                    });
+                }
+                else
+                {
+                    this.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        /** Tab 2 (failed security check) **/
+
+                        if (tvi2.Header != null && tvi2.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
+                            tvi2.Header = $"{jmsg.Sender}";
+                        else if (_tab2Messages.Count > _maxMessages)
+                            _tab2Messages.RemoveAt(_maxMessages);
+
+                        var appMsg = new ApplicationMessage
+                        {
+                            Module = ModuleId.IPC_Failed,
+                            MessagePayload = jmsg,
+                            MessageText = $"{jmsg}",
+                            MessageType = typeof(Shared.IpcMessage),
+                            MessageTime = jmsg.Time.ParseJsonDateTime(),
+                        };
+                        _tab2Messages?.Insert(0, appMsg);
+                    });
+                }
+            }
+            else
+            {
+                Debug.WriteLine($"⚠ Disallowed/Unknown sender '{jmsg.Sender}'");
+            }
+        }
+        else
+            Debug.WriteLine($"JSON 📨 {jmsg}");
+    }
+
+    /// <summary>
+    /// Message received event
+    /// </summary>
+    /// <param name="msg">raw message data</param>
+    void IpcServer_MessageReceived(string msg)
+    {
+        Debug.WriteLine($"Received 📨 {msg}");
+        this.DispatcherQueue.TryEnqueue(() =>
+        {
+            /** Tab 3 (connection history) **/
+
+            if (tvi3.Header != null && tvi3.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
+                tvi3.Header = $"Connections";
+            else if (_tab3Messages.Count > _maxMessages)
+                _tab3Messages.RemoveAt(_maxMessages);
+
+            var obj = JsonSerializer.Deserialize<Shared.IpcMessage>(msg);
+            if (obj != null)
+            {
+                var dict = ipcServer.GetConnectionHistory();
+                foreach (var item in dict)
+                {
+                    var conMsg = new ApplicationMessage
+                    {
+                        Module = ModuleId.IPC_Client,
+                        MessagePayload = $"{item.Key}",
+                        MessageText = $"💻 {item.Key}    ⌚ {item.Value}    ⏱️ {obj.Time}",
+                        MessageType = typeof(Shared.IpcMessage),
+                        MessageTime = item.Value,
+                    };
+                    //if (_tab3Messages.Count != dict.Count)
+                    _tab3Messages?.Insert(0, conMsg);
+                }
+            }
+        });
+
     }
     #endregion
 
     void UpdateInfoBar(string msg, MessageLevel level = MessageLevel.Information)
     {
-        if (App.IsClosing || infoBar == null)
+        if (App.IsClosing || this.Content == null)
             return;
-
-        //DispatcherQueue.InvokeOnUI(() => { tbMessages.Text = msg; });
 
         _ = infoBar.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () =>
         {
@@ -275,4 +329,57 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         });
     }
+
+    #region [Dragging]
+    void UIElement_PointerPressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        ((UIElement)sender).CapturePointer(e.Pointer);
+        var currentPoint = e.GetCurrentPoint((UIElement)sender);
+        if (currentPoint.Properties.IsLeftButtonPressed && MainWindow.appW != null)
+        {
+            ((UIElement)sender).CapturePointer(e.Pointer);
+            windowStartX = MainWindow.appW.Position.X;
+            windowStartY = MainWindow.appW.Position.Y;
+            Windows.Graphics.PointInt32 pt;
+            NativeMethods.GetCursorPos(out pt); // user32.dll
+            initialPointerX = pt.X;
+            initialPointerY = pt.Y;
+            isMoving = true;
+        }
+        //else if (currentPoint.Properties.IsRightButtonPressed)
+        //{
+        //    if (Content is not null && Content.XamlRoot is not null)
+        //    {
+        //        FlyoutShowOptions options = new FlyoutShowOptions();
+        //        options.ShowMode = FlyoutShowMode.Standard;
+        //        options.Position = new Windows.Foundation.Point((int)currentPoint.Position.X, (int)currentPoint.Position.Y);
+        //        if (!TitlebarMenuFlyout.IsOpen && !App.IsClosing)
+        //            TitlebarMenuFlyout.ShowAt(Content, options);
+        //    }
+        //}
+        else if (currentPoint.Properties.IsMiddleButtonPressed)
+        {
+            e.Handled = true;
+            Application.Current.Exit();
+        }
+    }
+
+    void UIElement_PointerReleased(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        (sender as UIElement)?.ReleasePointerCapture(e.Pointer);
+        isMoving = false;
+    }
+
+    void UIElement_PointerMoved(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        var currentPoint = e.GetCurrentPoint((UIElement)sender);
+        if (currentPoint.Properties.IsLeftButtonPressed)
+        {
+            Windows.Graphics.PointInt32 pt;
+            NativeMethods.GetCursorPos(out pt);
+            if (isMoving && MainWindow.appW != null)
+                MainWindow.appW.Move(new Windows.Graphics.PointInt32(windowStartX + (pt.X - initialPointerX), windowStartY + (pt.Y - initialPointerY)));
+        }
+    }
+    #endregion
 }
