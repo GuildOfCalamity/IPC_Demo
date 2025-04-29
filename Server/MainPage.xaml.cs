@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -19,7 +20,9 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Shared;
+using Windows.Storage.Streams;
 
 namespace IPC_Demo;
 
@@ -133,6 +136,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             ipcServer.ErrorOccurred += IpcServer_ErrorOccurred;
             ipcServer.Start();
             #endregion
+
         }
         _loaded = true;
 
@@ -147,7 +151,16 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     void IpcServer_ErrorOccurred(Exception err)
     {
         if (_loaded)
+        {
             UpdateInfoBar($"Server Error: {err.Message}", MessageLevel.Error);
+            imgLED_err.DispatcherQueue.TryEnqueue(() =>
+            {
+                // Setting the source causes a flicker.
+                //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED1_err.png"));
+                imgLED_on.Visibility = Visibility.Collapsed;
+                imgLED_err.Visibility = Visibility.Visible;
+            });
+        }
         else
             Debug.WriteLine($"⚠ Server Error: {err.Message}");
     }
@@ -163,15 +176,15 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             // Check if it's a message from us by us.
             if (!string.IsNullOrEmpty(jmsg.Sender) && jmsg.Sender == Environment.MachineName)
             {
+                #region [LED toggle]
                 if (_toggle)
                 {
                     _toggle = false;
-                    imgLED_off.DispatcherQueue.TryEnqueue(() =>
+                    imgLED_on.DispatcherQueue.TryEnqueue(() =>
                     {
                         // Setting the source causes a flicker.
-                        //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED_off.png"));
+                        //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED1_off.png"));
                         imgLED_on.Visibility = Visibility.Collapsed; 
-                        imgLED_off.Visibility = Visibility.Visible;
                     });
                 }
                 else
@@ -180,11 +193,20 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     imgLED_on.DispatcherQueue.TryEnqueue(() =>
                     {
                         // Setting the source causes a flicker.
-                        //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED_on.png"));
-                        imgLED_on.Visibility = Visibility.Visible;
-                        imgLED_off.Visibility = Visibility.Collapsed;
+                        //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED1_on.png"));
+                        if (Random.Shared.Next(10) == 9)
+                        {
+                            imgLED_err.Visibility = Visibility.Visible;
+                            imgLED_on.Visibility = Visibility.Collapsed;
+                        }
+                        else
+                        {
+                            imgLED_on.Visibility = Visibility.Visible;
+                            imgLED_err.Visibility = Visibility.Collapsed;
+                        }
                     });
                 }
+                #endregion
 
                 // Security check
                 if (Shared.SecurityHelper.VerifySecureCode6(jmsg.Secret, _secret))
@@ -216,6 +238,12 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     this.DispatcherQueue.TryEnqueue(() =>
                     {
                         /** Tab 2 (failed security check) **/
+
+                        // Setting the source causes a flicker.
+                        //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED1_err.png"));
+                        imgLED_on.Visibility = Visibility.Collapsed;
+                        imgLED_err.Visibility = Visibility.Visible;
+
 
                         if (tvi2.Header != null && tvi2.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
                             tvi2.Header = $"{jmsg.Sender}";
@@ -329,6 +357,22 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         });
     }
+
+    public async Task TestSoftwareBitmap()
+    {
+        Microsoft.UI.Xaml.Media.Imaging.RenderTargetBitmap renderTargetBitmap = new();
+        await renderTargetBitmap.RenderAsync(imgLED_on, 50, 50);
+        // Convert RenderTargetBitmap to SoftwareBitmap
+        IBuffer pixelBuffer = await renderTargetBitmap.GetPixelsAsync();
+        byte[] pixels = pixelBuffer.ToArray();
+        Windows.Graphics.Imaging.SoftwareBitmap softwareBitmap = new Windows.Graphics.Imaging.SoftwareBitmap(Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8, renderTargetBitmap.PixelWidth, renderTargetBitmap.PixelHeight, Windows.Graphics.Imaging.BitmapAlphaMode.Premultiplied);
+        softwareBitmap.CopyFromBuffer(pixelBuffer);
+        /** 
+         **  Apply here 
+         **/
+        softwareBitmap.Dispose();
+    }
+
 
     #region [Dragging]
     void UIElement_PointerPressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)

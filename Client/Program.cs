@@ -55,5 +55,8 @@ public class Program
             }
             Thread.Sleep(1500);
         }
+
+        Console.WriteLine("🔔 Test complete");
+        Thread.Sleep(1000);
     }
 }

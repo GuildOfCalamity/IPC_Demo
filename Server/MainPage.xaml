@@ -21,6 +21,46 @@
             Stretch="Uniform" />
         <!--#endregion-->
 
+        <!--#region LED signal-->
+
+        <!--
+            NOTE: CompositeMode=MinBlend will result in a more subtle effect, but is not as pronounced as SourceOver.
+        -->
+        <Image
+            x:Name="imgLED_off"
+            Width="50"
+            Margin="0,0,16,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            CompositeMode="SourceOver"
+            Opacity="1"
+            Source="/Assets/LED6_off.png"
+            Stretch="Uniform"
+            Visibility="Visible" />
+        <Image
+            x:Name="imgLED_on"
+            Width="50"
+            Margin="0,0,16,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            CompositeMode="SourceOver"
+            Opacity="1"
+            Source="/Assets/LED6_on.png"
+            Stretch="Uniform"
+            Visibility="Collapsed" />
+        <Image
+            x:Name="imgLED_err"
+            Width="50"
+            Margin="0,0,16,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            CompositeMode="SourceOver"
+            Opacity="1"
+            Source="/Assets/LED6_err.png"
+            Stretch="Uniform"
+            Visibility="Collapsed" />
+        <!--#endregion-->
+
         <ProgressRing
             Width="100"
             Height="100"
@@ -83,31 +123,8 @@
             </TabView.TabStripHeader>
             <TabView.TabStripFooter>
                 <Grid MinWidth="200" Background="Transparent">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="40" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Image
-                        x:Name="imgLED_on"
-                        Grid.Column="0"
-                        Width="30"
-                        Height="30"
-                        Margin="-1"
-                        Source="/Assets/LED_on.png"
-                        Stretch="Fill"
-                        Visibility="Collapsed" />
-                    <Image
-                        x:Name="imgLED_off"
-                        Grid.Column="0"
-                        Width="30"
-                        Height="30"
-                        Margin="-1"
-                        Source="/Assets/LED_off.png"
-                        Stretch="Fill"
-                        Visibility="Visible" />
                     <TextBlock
                         x:Name="tsf"
-                        Grid.Column="1"
                         Margin="10,4,0,0"
                         VerticalAlignment="Center"
                         FontSize="{StaticResource FontSizeSmall}"

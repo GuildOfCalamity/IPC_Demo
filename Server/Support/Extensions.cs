@@ -63,8 +63,7 @@ public static class Extensions
     /// <returns>number of minutes remaining in the current hour</returns>
     public static int MinutesRemainingInCurrentHour()
     {
-        DateTime now = DateTime.Now;
-        int minutesPassed = now.Minute;
+        int minutesPassed = DateTime.Now.Minute;
         return 60 - minutesPassed;
     }
 
