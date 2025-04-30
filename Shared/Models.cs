@@ -15,6 +15,9 @@ public class IpcMessage
 
     public override string ToString()
     {
+        //return $"Type: {Type} ⇒  Sender: {Sender}  Time: {Time}{Environment.NewLine}Payload: {Payload}";
+        
+        // *NOTE* This exposes the "secret" in the JSON output string.
         return JsonSerializer.Serialize<IpcMessage>(this, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,

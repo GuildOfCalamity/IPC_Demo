@@ -19,10 +19,12 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
+using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Shared;
 using Windows.Storage.Streams;
+
+using Shared;
 
 namespace IPC_Demo;
 
@@ -76,7 +78,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         this.InitializeComponent();
         this.Loaded += IpcPageOnLoaded;
         this.Unloaded += IpcPageOnUnloaded;
-
+        
         try
         {
             // We could change this to dynamically create a tab when a new client
@@ -142,6 +144,13 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
         var workingCode = Shared.SecurityHelper.GenerateSecureCode6(_secret);
         UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}", MessageLevel.Information);
+
+        gridLED.Visibility = Visibility.Collapsed;
+        // We're using the Compositor to swap the image, instead of the Image.Visibility trick.
+        float width = 48; float height = 48;
+        LoadVisualComposition(root, "ms-appx:///Assets/LED8_off.png", out _visualOff, Microsoft.UI.Colors.Transparent, width, height);
+        LoadVisualComposition(root, "ms-appx:///Assets/LED8_on.png", out _visualOn, Windows.UI.Color.FromArgb(255, 0, 245, 0), width, height);
+        LoadVisualComposition(root, "ms-appx:///Assets/LED8_err.png", out _visualErr, Windows.UI.Color.FromArgb(255, 245, 0, 0), width, height);
     }
 
     /// <summary>
@@ -155,10 +164,11 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             UpdateInfoBar($"Server Error: {err.Message}", MessageLevel.Error);
             imgLED_err.DispatcherQueue.TryEnqueue(() =>
             {
-                // Setting the source causes a flicker.
-                //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED1_err.png"));
-                imgLED_on.Visibility = Visibility.Collapsed;
-                imgLED_err.Visibility = Visibility.Visible;
+                //comp_on.Visibility = Visibility.Collapsed;
+                //comp_err.Visibility = Visibility.Visible;
+
+                // We're using the Compositor to swap the image, instead of the Image.Visibility trick.
+                SetVisualChild(root, _visualErr);
             });
         }
         else
@@ -182,9 +192,14 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     _toggle = false;
                     imgLED_on.DispatcherQueue.TryEnqueue(() =>
                     {
-                        // Setting the source causes a flicker.
-                        //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED1_off.png"));
-                        imgLED_on.Visibility = Visibility.Collapsed; 
+                        /*
+                         NOTE: Setting the source causes a flicker.
+                         img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED1_off.png"));
+                        */
+
+                        //comp_on.Visibility = Visibility.Collapsed;
+                        // We're using the Compositor to swap the image, instead of the Image.Visibility trick.
+                        SetVisualChild(root, _visualOff);
                     });
                 }
                 else
@@ -192,18 +207,14 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     _toggle = true;
                     imgLED_on.DispatcherQueue.TryEnqueue(() =>
                     {
-                        // Setting the source causes a flicker.
-                        //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED1_on.png"));
-                        if (Random.Shared.Next(10) == 9)
-                        {
-                            imgLED_err.Visibility = Visibility.Visible;
-                            imgLED_on.Visibility = Visibility.Collapsed;
-                        }
-                        else
-                        {
-                            imgLED_on.Visibility = Visibility.Visible;
-                            imgLED_err.Visibility = Visibility.Collapsed;
-                        }
+                        /*
+                         NOTE: Setting the source causes a flicker.
+                         img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED1_on.png"));
+                        */
+
+                        //comp_on.Visibility = Visibility.Visible;
+                        // We're using the Compositor to swap the image, instead of the Image.Visibility trick.
+                        SetVisualChild(root, _visualOn);
                     });
                 }
                 #endregion
@@ -239,11 +250,14 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     {
                         /** Tab 2 (failed security check) **/
 
-                        // Setting the source causes a flicker.
-                        //img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED1_err.png"));
-                        imgLED_on.Visibility = Visibility.Collapsed;
-                        imgLED_err.Visibility = Visibility.Visible;
+                        /* 
+                         NOTE: Setting the source causes a flicker.
+                         img.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/LED1_err.png"));
+                        */
 
+                        //comp_on.Visibility = Visibility.Collapsed;
+                        //comp_err.Visibility = Visibility.Visible;
+                        SetVisualChild(root, _visualErr);
 
                         if (tvi2.Header != null && tvi2.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
                             tvi2.Header = $"{jmsg.Sender}";
@@ -358,21 +372,106 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         });
     }
 
-    public async Task TestSoftwareBitmap()
+    #region [Image toggle using Compositor]
+
+    // NOTE: This was an experiment to see if we could use the Compositor to swap-in/swap-out the LED image states.
+    // It works, but the setup is more complicated than just setting the <CompShadow> control's visibility.
+
+    Microsoft.UI.Composition.SpriteVisual? _visualOn = null;
+    Microsoft.UI.Composition.SpriteVisual? _visualOff = null;
+    Microsoft.UI.Composition.SpriteVisual? _visualErr = null;
+
+    /// <summary>
+    /// Can be used to toggle the <see cref="Microsoft.UI.Composition.SpriteVisual"/> on or off.
+    /// </summary>
+    /// <param name="state"></param>
+    public void ToggleVisual(bool state, Microsoft.UI.Composition.SpriteVisual? visual)
     {
-        Microsoft.UI.Xaml.Media.Imaging.RenderTargetBitmap renderTargetBitmap = new();
-        await renderTargetBitmap.RenderAsync(imgLED_on, 50, 50);
-        // Convert RenderTargetBitmap to SoftwareBitmap
-        IBuffer pixelBuffer = await renderTargetBitmap.GetPixelsAsync();
-        byte[] pixels = pixelBuffer.ToArray();
-        Windows.Graphics.Imaging.SoftwareBitmap softwareBitmap = new Windows.Graphics.Imaging.SoftwareBitmap(Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8, renderTargetBitmap.PixelWidth, renderTargetBitmap.PixelHeight, Windows.Graphics.Imaging.BitmapAlphaMode.Premultiplied);
-        softwareBitmap.CopyFromBuffer(pixelBuffer);
-        /** 
-         **  Apply here 
-         **/
-        softwareBitmap.Dispose();
+        if (visual == null)
+            return;
+
+        visual.IsVisible = state;
     }
 
+    public void SetVisualChild(FrameworkElement fe, Microsoft.UI.Composition.SpriteVisual? visual)
+    {
+        if (fe == null)
+            return;
+
+        ElementCompositionPreview.SetElementChildVisual(fe, visual);
+    }
+
+    /// <summary>
+    /// This will lay down the <paramref name="uriAsset"/> image on the <see cref="FrameworkElement"/> using the Compositor.
+    /// </summary>
+    public void LoadVisualComposition(FrameworkElement fe, string uriAsset, out Microsoft.UI.Composition.SpriteVisual visual, Windows.UI.Color shadowColor, float width = 0, float height = 0)
+    {
+        Microsoft.UI.Xaml.Media.LoadedImageSurface? surface;
+        var targetVisual = ElementCompositionPreview.GetElementVisual(fe);
+        Microsoft.UI.Composition.Compositor? compositor = targetVisual.Compositor;
+
+        // Create LoadedImageSurface from appx URI
+        if (!string.IsNullOrEmpty(uriAsset))
+            surface = LoadedImageSurface.StartLoadFromUri(new Uri(uriAsset));
+        else
+            surface = LoadedImageSurface.StartLoadFromUri(new Uri($"ms-appx:///Assets/LED8_on.png"));
+
+        // Create a CompositionBrush and set the surface
+        var brush = compositor.CreateSurfaceBrush();
+        brush.Surface = surface;
+
+        // Create a visual sized to match the Image control
+        visual = compositor.CreateSpriteVisual();
+        if (visual == null) { return; }
+
+        if ((width == 0 || height == 0) && fe.ActualSize != System.Numerics.Vector2.Zero)
+        {
+            visual.Size = new System.Numerics.Vector2((float)fe.ActualWidth, (float)fe.ActualHeight);
+            //targetVisual.CenterPoint = new System.Numerics.Vector3(fe.ActualSize.X / 2f, fe.ActualSize.Y / 2f, 0f);
+        }
+        else
+        {
+            visual.Size = new System.Numerics.Vector2(width, height);
+        }
+
+        // Top-right corner
+        visual.RelativeOffsetAdjustment = new System.Numerics.Vector3(0.93f, 0.0f, 0f); // center the image
+
+        visual.Brush = brush;
+
+        if (shadowColor != Microsoft.UI.Colors.Transparent)
+        {
+            // Create drop shadow (this is noticeable on a CompositionSurfaceBrush, but not on a CompositionColorBrush).
+            Microsoft.UI.Composition.DropShadow shadow = compositor.CreateDropShadow();
+            shadow.Opacity = 0.8f;
+            shadow.Color = shadowColor;
+            shadow.BlurRadius = 20f;
+            shadow.Offset = new System.Numerics.Vector3(0, 0, -1);
+            // Specify mask policy for shadow.
+            shadow.SourcePolicy = Microsoft.UI.Composition.CompositionDropShadowSourcePolicy.InheritFromVisualContent;
+
+            // Associate shadow with visual.
+            visual.Shadow = shadow;
+        }
+
+        //brush.Scale = new System.Numerics.Vector2 { X = 0.75f, Y = 0.75f };
+        brush.Stretch = Microsoft.UI.Composition.CompositionStretch.Uniform;
+        brush.BitmapInterpolationMode = Microsoft.UI.Composition.CompositionBitmapInterpolationMode.Linear;
+        
+        visual.IsVisible = true; // can be used to toggle the image on/off
+
+        // Set the visual onto the Image control
+        //ElementCompositionPreview.SetElementChildVisual(fe, visual);
+    }
+
+    public void ClearVisualComposition(FrameworkElement fe)
+    {
+        if (fe == null)
+            return;
+
+        ElementCompositionPreview.SetElementChildVisual(fe, null);
+    }
+    #endregion
 
     #region [Dragging]
     void UIElement_PointerPressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
