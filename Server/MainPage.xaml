@@ -9,7 +9,10 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid x:Name="root" Margin="10" BorderThickness="0">
+    <Grid
+        x:Name="root"
+        Margin="10"
+        BorderThickness="0">
 
         <!--#region [Watermark]-->
         <Image
@@ -21,58 +24,22 @@
             Stretch="Uniform" />
         <!--#endregion-->
 
-        <!--#region LED signal-->
+        <!--#region [LED signal]-->
         <Grid
-            x:Name="gridLED"
-            Width="50"
-            Height="50"
-            Margin="0,0,18,0"
+            x:Name="layer1"
+            Width="52"
+            Height="52"
+            Margin="0,-22,36,0"
             HorizontalAlignment="Right"
-            VerticalAlignment="Top">
-            <!--
-                NOTE: For 'Image' controls the 'CompositeMode=MinBlend' will result in a
-                more subtle effect, but is not as pronounced as 'CompositeMode=SourceOver'.
-            -->
-            <Image
-                x:Name="imgLED_off"
-                Width="50"
-                Opacity="1"
-                Source="/Assets/LED8_off.png"
-                Stretch="Uniform"
-                Visibility="Visible" />
-            <ctrl:CompShadow
-                x:Name="comp_on"
-                BlurRadius="8"
-                OffsetX="0"
-                OffsetY="0"
-                ShadowOpacity="0.8"
-                Visibility="Collapsed"
-                Color="#00F000">
-                <Image
-                    x:Name="imgLED_on"
-                    Width="50"
-                    Opacity="1"
-                    Source="/Assets/LED8_on.png"
-                    Stretch="Uniform"
-                    Visibility="Visible" />
-            </ctrl:CompShadow>
-            <ctrl:CompShadow
-                x:Name="comp_err"
-                BlurRadius="8"
-                OffsetX="0"
-                OffsetY="0"
-                ShadowOpacity="0.8"
-                Visibility="Collapsed"
-                Color="#F00000">
-                <Image
-                    x:Name="imgLED_err"
-                    Width="50"
-                    Opacity="1"
-                    Source="/Assets/LED8_err.png"
-                    Stretch="Uniform"
-                    Visibility="Visible" />
-            </ctrl:CompShadow>
-        </Grid>
+            VerticalAlignment="Top" />
+
+        <Grid
+            x:Name="layer2"
+            Width="52"
+            Height="52"
+            Margin="0,-22,36,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top" />
         <!--#endregion-->
 
         <ProgressRing
