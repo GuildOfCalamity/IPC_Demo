@@ -25,19 +25,21 @@
         <!--#endregion-->
 
         <!--#region [LED signal]-->
+        <!--
+            These grids will serve as placeholders for the Visual Composition layering.
+        -->
         <Grid
             x:Name="layer1"
-            Width="52"
-            Height="52"
-            Margin="0,-22,36,0"
+            Width="0"
+            Height="0"
+            Margin="0,-2,80,0"
             HorizontalAlignment="Right"
             VerticalAlignment="Top" />
-
         <Grid
             x:Name="layer2"
-            Width="52"
-            Height="52"
-            Margin="0,-22,36,0"
+            Width="0"
+            Height="0"
+            Margin="0,-2,80,0"
             HorizontalAlignment="Right"
             VerticalAlignment="Top" />
         <!--#endregion-->

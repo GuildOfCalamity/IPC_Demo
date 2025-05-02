@@ -145,14 +145,24 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         var workingCode = Shared.SecurityHelper.GenerateSecureCode6(_secret);
         UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}", MessageLevel.Information);
 
-        #region [LED image toggle]
-        // We're using the Compositor to swap the image, instead of the Image.Visibility trick.
-        float width = 48; float height = 48;
-        LoadVisualComposition(layer1, "ms-appx:///Assets/LED14_off.png", out _visualOff, Microsoft.UI.Colors.Transparent, new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, 0.9f);
-        LoadVisualComposition(layer2, "ms-appx:///Assets/LED14_on.png", out _visualOn, Windows.UI.Color.FromArgb(255, 0, 245, 0), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, 0.9f);
-        LoadVisualComposition(layer2, "ms-appx:///Assets/LED14_err.png", out _visualErr, Windows.UI.Color.FromArgb(255, 245, 0, 0), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, 0.9f);
+        // LED image toggle
+        InitializeVisualCompositionLayers(asset: "Bulb6");
+    }
+
+    /// <summary>
+    /// We're using the Compositor to swap the image, instead of the Image.Visibility trick.
+    /// You could just employ one grid control, but then you'd have to layer visuals with 
+    /// multiple calls. This will accomplish the same effect, but with less code-behind.
+    /// </summary>
+    void InitializeVisualCompositionLayers(string asset = "LED18", float width = 60, float height = 60, float opacity = 0.9f)
+    {
+        
+        LoadVisualComposition(layer1, $"ms-appx:///Assets/{asset}_off.png", out _visualOff, Microsoft.UI.Colors.Transparent, new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
+        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_on.png", out _visualOn, Windows.UI.Color.FromArgb(255, 0, 245, 0), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
+        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_wrn.png", out _visualWrn, Windows.UI.Color.FromArgb(255, 255, 223, 14), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
+        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_err.png", out _visualErr, Windows.UI.Color.FromArgb(255, 245, 0, 0), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
+        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_alt.png", out _visualAlt, Windows.UI.Color.FromArgb(255, 13, 210, 255), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
         SetVisualChild(layer1, _visualOff); // off image always visible
-        #endregion
     }
 
     /// <summary>
@@ -190,7 +200,15 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                 else
                 {
                     _toggle = true;
-                    SetVisualChild(layer2, _visualOn); // We're using the Compositor to swap the image, instead of the Image.Visibility trick.
+                    var test = Random.Shared.NextDouble();
+                    if (test >= 0.85)
+                        SetVisualChild(layer2, _visualErr);
+                    else if (test >= 0.65)
+                        SetVisualChild(layer2, _visualWrn);
+                    else if (test >= 0.45)
+                        SetVisualChild(layer2, _visualAlt);
+                    else
+                        SetVisualChild(layer2, _visualOn);
                 }
                 #endregion
 
@@ -344,11 +362,13 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     Microsoft.UI.Composition.SpriteVisual? _visualOn = null;
     Microsoft.UI.Composition.SpriteVisual? _visualOff = null;
     Microsoft.UI.Composition.SpriteVisual? _visualErr = null;
+    Microsoft.UI.Composition.SpriteVisual? _visualWrn = null;
+    Microsoft.UI.Composition.SpriteVisual? _visualAlt = null;
 
     /// <summary>
     /// Can be used to toggle the <see cref="Microsoft.UI.Composition.SpriteVisual"/> on or off.
     /// </summary>
-    /// <param name="state"></param>
+    /// <param name="state"><c>true</c> for visible, <c>false</c> for invisible</param>
     public void ToggleVisual(bool state, Microsoft.UI.Composition.SpriteVisual? visual)
     {
         if (visual == null)
@@ -366,13 +386,84 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         if (fe == null)
             return;
 
+        // We may be under a forked thread when called, so just to be safe we'll enqueue on FrameworkElement's dispatcher.
         fe.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () =>
         {
-            // Remove old reference
+            // Remove any existing reference
             ElementCompositionPreview.SetElementChildVisual(fe, null);
+
             // Apply new visual
             ElementCompositionPreview.SetElementChildVisual(fe, visual);
         });
+    }
+
+    /// <summary>
+    /// Applies the given <paramref name="layer1"/>, then <paramref name="layer2"/> to the <see cref="FrameworkElement"/> <paramref name="fe"/>.
+    /// <code>
+    ///    SetLayeredVisuals(rootGrid, _visualOff, _visualOn);
+    /// </code>
+    /// </summary>
+    /// <remarks>The layers will be applied in the order <b>layer1</b> then <b>layer2</b>.</remarks>
+    public void SetLayeredVisuals(FrameworkElement fe, Microsoft.UI.Composition.SpriteVisual? layer1, Microsoft.UI.Composition.SpriteVisual? layer2)
+    {
+        if (fe == null)
+            return;
+
+        var compositor = ElementCompositionPreview.GetElementVisual(fe).Compositor;
+        if (compositor == null)
+            return;
+
+        Microsoft.UI.Composition.ContainerVisual? containerVisual = compositor.CreateContainerVisual();
+
+        // Add visual layers to the container's visual collection
+        containerVisual.Children.InsertAtTop(layer1);
+        containerVisual.Children.InsertAtTop(layer2);
+
+        // Remove any existing reference
+        ElementCompositionPreview.SetElementChildVisual(fe, null);
+
+        // Apply new layered visual
+        ElementCompositionPreview.SetElementChildVisual(fe, containerVisual);
+    }
+
+    /// <summary>
+    /// Applies the given <paramref name="layers"/> to the <see cref="FrameworkElement"/> <paramref name="fe"/>.
+    /// <code>
+    ///    SetLayeredVisuals(rootGrid, new SpriteVisual[] { _visualOff, _visualErr, _visualWrn, _visualAlt, _visualOn });
+    /// </code>
+    /// </summary>
+    /// <param name="layers">array of <see cref="Microsoft.UI.Composition.SpriteVisual"/>s</param>
+    public void SetLayeredVisuals(FrameworkElement fe, params Microsoft.UI.Composition.SpriteVisual[] layers)
+    {
+        if (fe == null)
+            return;
+
+        var compositor = ElementCompositionPreview.GetElementVisual(fe).Compositor;
+        if (compositor == null)
+            return;
+
+        Microsoft.UI.Composition.ContainerVisual? containerVisual = compositor.CreateContainerVisual();
+
+        // Add each visual layer to the container's visual collection
+        layers.ForEach(sv => { containerVisual.Children.InsertAtTop(sv); });
+
+        // Remove any existing reference
+        ElementCompositionPreview.SetElementChildVisual(fe, null);
+
+        // Apply new layered visual
+        ElementCompositionPreview.SetElementChildVisual(fe, containerVisual);
+    }
+
+    /// <summary>
+    /// Removes the <see cref="Microsoft.UI.Composition.SpriteVisual"/> from the <see cref="FrameworkElement"/> <paramref name="fe"/>.
+    /// </summary>
+    /// <param name="fe"></param>
+    public void ClearVisualComposition(FrameworkElement fe)
+    {
+        if (fe == null)
+            return;
+
+        ElementCompositionPreview.SetElementChildVisual(fe, null);
     }
 
     /// <summary>
@@ -385,11 +476,19 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         var targetVisual = ElementCompositionPreview.GetElementVisual(fe);
         Microsoft.UI.Composition.Compositor? compositor = targetVisual.Compositor;
 
-        // Create LoadedImageSurface from appx URI
-        if (!string.IsNullOrEmpty(uriAsset))
-            surface = LoadedImageSurface.StartLoadFromUri(new Uri(uriAsset));
-        else
-            surface = LoadedImageSurface.StartLoadFromUri(new Uri($"ms-appx:///Assets/LED8_on.png"));
+        try
+        {
+            // Create LoadedImageSurface from appx URI
+            if (!string.IsNullOrEmpty(uriAsset))
+                surface = LoadedImageSurface.StartLoadFromUri(new Uri(uriAsset));
+            else
+                surface = LoadedImageSurface.StartLoadFromUri(new Uri($"ms-appx:///Assets/LED8_on.png"));
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"⚠ {MethodBase.GetCurrentMethod()?.Name}: {ex.Message}");
+            surface = null;
+        }
 
         // Create a CompositionBrush and set the surface
         var brush = compositor.CreateSurfaceBrush();
@@ -417,9 +516,9 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         {
             // Create drop shadow (this is noticeable on a CompositionSurfaceBrush, but not on a CompositionColorBrush).
             Microsoft.UI.Composition.DropShadow shadow = compositor.CreateDropShadow();
-            shadow.Opacity = 0.8f;
+            shadow.Opacity = 0.85f;
             shadow.Color = glowColor;
-            shadow.BlurRadius = 20f;
+            shadow.BlurRadius = 21f;
             shadow.Offset = new System.Numerics.Vector3(0, -1, -1); // glow slightly up for the LED effect
             // Specify mask policy for shadow.
             shadow.SourcePolicy = Microsoft.UI.Composition.CompositionDropShadowSourcePolicy.InheritFromVisualContent;
@@ -434,16 +533,32 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         
         visual.IsVisible = true; // can be used to toggle the image on/off
 
-        // Set the visual onto the Image control (do this later during state change)
+        // Set the visual onto the Image control (we'll do this later during state change)
         //ElementCompositionPreview.SetElementChildVisual(fe, visual);
     }
 
-    public void ClearVisualComposition(FrameworkElement fe)
+    public static void StackVisuals(UIElement targetElement)
     {
-        if (fe == null)
-            return;
+        Microsoft.UI.Composition.Compositor compositor = ElementCompositionPreview.GetElementVisual(targetElement).Compositor;
+        Microsoft.UI.Composition.ContainerVisual containerVisual = compositor.CreateContainerVisual();
 
-        ElementCompositionPreview.SetElementChildVisual(fe, null);
+        // Create 1st layer child visual
+        Microsoft.UI.Composition.SpriteVisual layer1 = compositor.CreateSpriteVisual();
+        layer1.Size = new System.Numerics.Vector2(100, 100);
+        layer1.Brush = compositor.CreateColorBrush(Microsoft.UI.Colors.Red);
+
+        // Create 2nd layer child visual
+        Microsoft.UI.Composition.SpriteVisual layer2 = compositor.CreateSpriteVisual();
+        layer2.Size = new System.Numerics.Vector2(100, 100);
+        layer2.Brush = compositor.CreateColorBrush(Microsoft.UI.Colors.Blue);
+        layer2.Offset = new System.Numerics.Vector3(50, 50, 0); // Offset to stack
+
+        // Add visual layers to the container
+        containerVisual.Children.InsertAtTop(layer1);
+        containerVisual.Children.InsertAtTop(layer2);
+
+        // Set the container visual as the child visual of the target element
+        ElementCompositionPreview.SetElementChildVisual(targetElement, containerVisual);
     }
     #endregion
 
