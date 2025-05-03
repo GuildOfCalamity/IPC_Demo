@@ -146,7 +146,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}", MessageLevel.Information);
 
         // LED image toggle
-        InitializeVisualCompositionLayers(asset: "Bulb6");
+        InitializeVisualCompositionLayers();
     }
 
     /// <summary>
