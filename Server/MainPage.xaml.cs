@@ -146,7 +146,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}", MessageLevel.Information);
 
         // LED image toggle
-        InitializeVisualCompositionLayers();
+        InitializeVisualCompositionLayers(asset: "LED18", width: 70, height: 70);
     }
 
     /// <summary>
@@ -455,6 +455,63 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     }
 
     /// <summary>
+    /// Applies the given <paramref name="layer1"/>, then <paramref name="layer2"/> to the <see cref="FrameworkElement"/> <paramref name="fe"/>.
+    /// <code>
+    ///    SetLayeredAbove(rootGrid, _visualOff, _visualOn);
+    /// </code>
+    /// </summary>
+    /// <remarks>The layers will be applied in the order <b>layer1</b> then <b>layer2</b>.</remarks>
+    public void SetLayeredAbove(FrameworkElement fe, Microsoft.UI.Composition.SpriteVisual? layer1, Microsoft.UI.Composition.SpriteVisual? layer2)
+    {
+        if (fe == null)
+            return;
+
+        var compositor = ElementCompositionPreview.GetElementVisual(fe).Compositor;
+        if (compositor == null)
+            return;
+
+        Microsoft.UI.Composition.ContainerVisual? containerVisual = compositor.CreateContainerVisual();
+
+        // Add visual layers to the container's visual collection
+        containerVisual.Children.InsertAbove(layer2, layer1);
+
+        // Remove any existing reference
+        ElementCompositionPreview.SetElementChildVisual(fe, null);
+
+        // Apply new layered visual
+        ElementCompositionPreview.SetElementChildVisual(fe, containerVisual);
+    }
+
+    /// <summary>
+    /// Applies the given <paramref name="layer2"/>, then <paramref name="layer1"/> to the <see cref="FrameworkElement"/> <paramref name="fe"/>.
+    /// <code>
+    ///    SetLayeredBelow(rootGrid, _visualOff, _visualOn);
+    /// </code>
+    /// </summary>
+    /// <remarks>The layers will be applied in the order <b>layer1</b> then <b>layer2</b>.</remarks>
+    public void SetLayeredBelow(FrameworkElement fe, Microsoft.UI.Composition.SpriteVisual? layer1, Microsoft.UI.Composition.SpriteVisual? layer2)
+    {
+        if (fe == null)
+            return;
+
+        var compositor = ElementCompositionPreview.GetElementVisual(fe).Compositor;
+        if (compositor == null)
+            return;
+
+        Microsoft.UI.Composition.ContainerVisual? containerVisual = compositor.CreateContainerVisual();
+
+        // Add visual layers to the container's visual collection
+        containerVisual.Children.InsertBelow(layer2, layer1);
+
+        // Remove any existing reference
+        ElementCompositionPreview.SetElementChildVisual(fe, null);
+
+        // Apply new layered visual
+        ElementCompositionPreview.SetElementChildVisual(fe, containerVisual);
+    }
+
+
+    /// <summary>
     /// Removes the <see cref="Microsoft.UI.Composition.SpriteVisual"/> from the <see cref="FrameworkElement"/> <paramref name="fe"/>.
     /// </summary>
     /// <param name="fe"></param>
@@ -518,7 +575,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             Microsoft.UI.Composition.DropShadow shadow = compositor.CreateDropShadow();
             shadow.Opacity = 0.85f;
             shadow.Color = glowColor;
-            shadow.BlurRadius = 21f;
+            shadow.BlurRadius = 30f;
             shadow.Offset = new System.Numerics.Vector3(0, -1, -1); // glow slightly up for the LED effect
             // Specify mask policy for shadow.
             shadow.SourcePolicy = Microsoft.UI.Composition.CompositionDropShadowSourcePolicy.InheritFromVisualContent;

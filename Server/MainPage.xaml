@@ -24,26 +24,6 @@
             Stretch="Uniform" />
         <!--#endregion-->
 
-        <!--#region [LED signal]-->
-        <!--
-            These grids will serve as placeholders for the Visual Composition layering.
-        -->
-        <Grid
-            x:Name="layer1"
-            Width="0"
-            Height="0"
-            Margin="0,-2,80,0"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Top" />
-        <Grid
-            x:Name="layer2"
-            Width="0"
-            Height="0"
-            Margin="0,-2,80,0"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Top" />
-        <!--#endregion-->
-
         <ProgressRing
             Width="100"
             Height="100"
@@ -424,6 +404,26 @@
                 Severity="Informational"
                 SlideUp="True" />
         </StackPanel>
+        <!--#endregion-->
+
+        <!--#region [LED signal]-->
+        <!--
+            These grids will serve as placeholders for the Visual Composition layering.
+        -->
+        <Grid
+            x:Name="layer1"
+            Width="0"
+            Height="0"
+            Margin="0,-2,90,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top" />
+        <Grid
+            x:Name="layer2"
+            Width="0"
+            Height="0"
+            Margin="0,-2,90,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top" />
         <!--#endregion-->
 
     </Grid>
