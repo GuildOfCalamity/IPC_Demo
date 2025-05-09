@@ -413,17 +413,11 @@
         <Grid
             x:Name="layer1"
             Width="0"
-            Height="0"
-            Margin="0,-2,90,0"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Top" />
+            Height="0" />
         <Grid
             x:Name="layer2"
             Width="0"
-            Height="0"
-            Margin="0,-2,90,0"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Top" />
+            Height="0" />
         <!--#endregion-->
 
     </Grid>

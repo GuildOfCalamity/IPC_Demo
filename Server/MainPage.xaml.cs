@@ -33,7 +33,7 @@ namespace IPC_Demo;
 /// </summary>
 public sealed partial class MainPage : Page, INotifyPropertyChanged
 {
-    #region [Properties]
+    #region [Main Props]
     /// <summary>
     /// Server and client must share this secret.
     /// Don't hard-code this as I have, this is just an example demo.
@@ -140,31 +140,50 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             #endregion
 
         }
-        _loaded = true;
 
         var workingCode = Shared.SecurityHelper.GenerateSecureCode6(_secret);
-        UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}", MessageLevel.Information);
 
-        // LED image toggle
-        InitializeVisualCompositionLayers(asset: "LED18", width: 70, height: 70);
+        #region [LED image toggle]
+        int attempts = 20;
+        string? asset = string.Empty;
+        while (--attempts > 0 && string.IsNullOrEmpty(asset) && (!asset.Contains("LED_") || !asset.Contains("Bulb_")))
+        {
+            asset = Path.GetFileName(GetRandomAsset(Path.Combine(AppContext.BaseDirectory, "Assets")));
+        }
+        if (!string.IsNullOrEmpty(asset))
+        {
+            InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 81, height: 81);
+            UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}    📷 {asset.Substring(0, asset.IndexOf("_"))}", MessageLevel.Information);
+        }
+        else
+        {
+            InitializeVisualCompositionLayers(asset: "LED18", width: 71, height: 71);
+            UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}", MessageLevel.Information);
+        }
+        #endregion
+
+
+        _loaded = true;
     }
+    #endregion
 
-    /// <summary>
-    /// We're using the Compositor to swap the image, instead of the Image.Visibility trick.
-    /// You could just employ one grid control, but then you'd have to layer visuals with 
-    /// multiple calls. This will accomplish the same effect, but with less code-behind.
-    /// </summary>
-    void InitializeVisualCompositionLayers(string asset = "LED18", float width = 60, float height = 60, float opacity = 0.9f)
+    public string? GetRandomAsset(string assetsFolderPath)
     {
-        
-        LoadVisualComposition(layer1, $"ms-appx:///Assets/{asset}_off.png", out _visualOff, Microsoft.UI.Colors.Transparent, new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
-        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_on.png", out _visualOn, Windows.UI.Color.FromArgb(255, 0, 245, 0), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
-        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_wrn.png", out _visualWrn, Windows.UI.Color.FromArgb(255, 255, 223, 14), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
-        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_err.png", out _visualErr, Windows.UI.Color.FromArgb(255, 245, 0, 0), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
-        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_alt.png", out _visualAlt, Windows.UI.Color.FromArgb(255, 13, 210, 255), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
-        SetVisualChild(layer1, _visualOff); // off image always visible
+        if (!Directory.Exists(assetsFolderPath))
+            return null;
+
+        var pngFiles = Directory.EnumerateFiles(assetsFolderPath, "*.png", SearchOption.TopDirectoryOnly).ToList();
+
+        if (pngFiles.Count == 0)
+            return null;
+
+        var random = new Random();
+        int index = random.Next(pngFiles.Count);
+
+        return pngFiles[index];
     }
 
+    #region [IPC Events]
     /// <summary>
     /// Server error event
     /// </summary>
@@ -296,9 +315,9 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     {
                         Module = ModuleId.IPC_Client,
                         MessagePayload = $"{item.Key}",
-                        MessageText = $"💻 {item.Key}    ⌚ {item.Value}    ⏱️ {obj.Time}",
+                        MessageText = $"💻 {item.Key}    ⌚ {item.Value.ToJsonFriendlyFormat()}    ⏱️ {obj.Time}",
                         MessageType = typeof(Shared.IpcMessage),
-                        MessageTime = item.Value,
+                        MessageTime = DateTime.Now /* item.Value */,
                     };
                     //if (_tab3Messages.Count != dict.Count)
                     _tab3Messages?.Insert(0, conMsg);
@@ -307,63 +326,40 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         });
 
     }
+
     #endregion
-
-    void UpdateInfoBar(string msg, MessageLevel level = MessageLevel.Information)
-    {
-        if (App.IsClosing || this.Content == null)
-            return;
-
-        _ = infoBar.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () =>
-        {
-            switch (level)
-            {
-                case MessageLevel.Debug:
-                    {
-                        infoBar.IsOpen = true;
-                        infoBar.Message = msg;
-                        infoBar.Severity = InfoBarSeverity.Informational;
-                        break;
-                    }
-                case MessageLevel.Information:
-                    {
-                        infoBar.IsOpen = true;
-                        infoBar.Message = msg;
-                        infoBar.Severity = InfoBarSeverity.Informational;
-                        break;
-                    }
-                case MessageLevel.Important:
-                    {
-                        infoBar.IsOpen = true;
-                        infoBar.Message = msg;
-                        infoBar.Severity = InfoBarSeverity.Success;
-                        break;
-                    }
-                case MessageLevel.Warning:
-                    {
-                        infoBar.IsOpen = true;
-                        infoBar.Message = msg;
-                        infoBar.Severity = InfoBarSeverity.Warning;
-                        break;
-                    }
-                case MessageLevel.Error:
-                    {
-                        infoBar.IsOpen = true;
-                        infoBar.Message = msg;
-                        infoBar.Severity = InfoBarSeverity.Error;
-                        break;
-                    }
-            }
-        });
-    }
 
     #region [Image toggle using Compositor]
 
-    Microsoft.UI.Composition.SpriteVisual? _visualOn = null;
-    Microsoft.UI.Composition.SpriteVisual? _visualOff = null;
-    Microsoft.UI.Composition.SpriteVisual? _visualErr = null;
-    Microsoft.UI.Composition.SpriteVisual? _visualWrn = null;
-    Microsoft.UI.Composition.SpriteVisual? _visualAlt = null;
+    Microsoft.UI.Composition.SpriteVisual? _visualOn = null;  // green lighting
+    Microsoft.UI.Composition.SpriteVisual? _visualAlt = null; // blue lighting
+    Microsoft.UI.Composition.SpriteVisual? _visualWrn = null; // yellow lighting
+    Microsoft.UI.Composition.SpriteVisual? _visualErr = null; // red lighting
+    Microsoft.UI.Composition.SpriteVisual? _visualOff = null; // no color
+
+    /// <summary>
+    /// We're using the Compositor to swap the image, instead of the Image.Visibility trick.
+    /// You could just employ one grid control, but then you'd have to layer visuals with 
+    /// multiple calls. This will accomplish the same effect, but with less code-behind.
+    /// </summary>
+    void InitializeVisualCompositionLayers(string asset = "LED18", float width = 60, float height = 60, float opacity = 0.9f)
+    {
+        LoadVisualComposition(layer1, $"ms-appx:///Assets/{asset}_off.png", out _visualOff, Microsoft.UI.Colors.Transparent, new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
+        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_on.png", out _visualOn, Windows.UI.Color.FromArgb(255, 0, 245, 0), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
+        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_wrn.png", out _visualWrn, Windows.UI.Color.FromArgb(255, 255, 223, 14), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
+        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_err.png", out _visualErr, Windows.UI.Color.FromArgb(255, 245, 0, 0), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
+        LoadVisualComposition(layer2, $"ms-appx:///Assets/{asset}_alt.png", out _visualAlt, Windows.UI.Color.FromArgb(255, 13, 210, 255), new System.Numerics.Vector3(0.5f, 0.5f, 0f), width, height, opacity);
+        SetVisualChild(layer1, _visualOff); // off image always visible
+
+        // Auto-adjust the grid layer margins, they must match for the effect to be seamless.
+        layer1.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
+        {
+            layer1.HorizontalAlignment = layer2.HorizontalAlignment = HorizontalAlignment.Right;
+            layer1.VerticalAlignment = layer2.VerticalAlignment = VerticalAlignment.Top;
+            layer1.Margin = new Thickness(0, -1 * (width * 0.05), width + (width * 0.25), 0);
+            layer2.Margin = new Thickness(0, -1 * (width * 0.05), width + (width * 0.25), 0);
+        });
+    }
 
     /// <summary>
     /// Can be used to toggle the <see cref="Microsoft.UI.Composition.SpriteVisual"/> on or off.
@@ -510,7 +506,6 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         ElementCompositionPreview.SetElementChildVisual(fe, containerVisual);
     }
 
-
     /// <summary>
     /// Removes the <see cref="Microsoft.UI.Composition.SpriteVisual"/> from the <see cref="FrameworkElement"/> <paramref name="fe"/>.
     /// </summary>
@@ -569,14 +564,14 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         visual.Brush = brush;
         visual.Opacity = opacity;
 
-        if (glowColor != Microsoft.UI.Colors.Transparent)
+        if (glowColor.A > 0x00 && glowColor != Microsoft.UI.Colors.Transparent)
         {
             // Create drop shadow (this is noticeable on a CompositionSurfaceBrush, but not on a CompositionColorBrush).
             Microsoft.UI.Composition.DropShadow shadow = compositor.CreateDropShadow();
             shadow.Opacity = 0.85f;
             shadow.Color = glowColor;
             shadow.BlurRadius = 30f;
-            shadow.Offset = new System.Numerics.Vector3(0, -1, -1); // glow slightly up for the LED effect
+            shadow.Offset = new System.Numerics.Vector3(0, 0, -1);
             // Specify mask policy for shadow.
             shadow.SourcePolicy = Microsoft.UI.Composition.CompositionDropShadowSourcePolicy.InheritFromVisualContent;
 
@@ -594,20 +589,25 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         //ElementCompositionPreview.SetElementChildVisual(fe, visual);
     }
 
-    public static void StackVisuals(UIElement targetElement)
+    public static void StackVisualsTest(UIElement targetElement)
     {
-        Microsoft.UI.Composition.Compositor compositor = ElementCompositionPreview.GetElementVisual(targetElement).Compositor;
-        Microsoft.UI.Composition.ContainerVisual containerVisual = compositor.CreateContainerVisual();
+        Microsoft.UI.Composition.Compositor? compositor = ElementCompositionPreview.GetElementVisual(targetElement).Compositor;
+        if (compositor is null)
+            return;
+
+        Microsoft.UI.Composition.ContainerVisual? containerVisual = compositor.CreateContainerVisual();
 
         // Create 1st layer child visual
         Microsoft.UI.Composition.SpriteVisual layer1 = compositor.CreateSpriteVisual();
         layer1.Size = new System.Numerics.Vector2(100, 100);
         layer1.Brush = compositor.CreateColorBrush(Microsoft.UI.Colors.Red);
+        layer1.Opacity = 0.8f;
 
         // Create 2nd layer child visual
         Microsoft.UI.Composition.SpriteVisual layer2 = compositor.CreateSpriteVisual();
         layer2.Size = new System.Numerics.Vector2(100, 100);
         layer2.Brush = compositor.CreateColorBrush(Microsoft.UI.Colors.Blue);
+        layer2.Opacity = 0.8f;
         layer2.Offset = new System.Numerics.Vector3(50, 50, 0); // Offset to stack
 
         // Add visual layers to the container
@@ -616,6 +616,56 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
         // Set the container visual as the child visual of the target element
         ElementCompositionPreview.SetElementChildVisual(targetElement, containerVisual);
+    }
+    #endregion
+
+    #region [Info/Slide Bar]
+    void UpdateInfoBar(string msg, MessageLevel level = MessageLevel.Information)
+    {
+        if (App.IsClosing || this.Content == null)
+            return;
+
+        _ = infoBar.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () =>
+        {
+            switch (level)
+            {
+                case MessageLevel.Debug:
+                    {
+                        infoBar.IsOpen = true;
+                        infoBar.Message = msg;
+                        infoBar.Severity = InfoBarSeverity.Informational;
+                        break;
+                    }
+                case MessageLevel.Information:
+                    {
+                        infoBar.IsOpen = true;
+                        infoBar.Message = msg;
+                        infoBar.Severity = InfoBarSeverity.Informational;
+                        break;
+                    }
+                case MessageLevel.Important:
+                    {
+                        infoBar.IsOpen = true;
+                        infoBar.Message = msg;
+                        infoBar.Severity = InfoBarSeverity.Success;
+                        break;
+                    }
+                case MessageLevel.Warning:
+                    {
+                        infoBar.IsOpen = true;
+                        infoBar.Message = msg;
+                        infoBar.Severity = InfoBarSeverity.Warning;
+                        break;
+                    }
+                case MessageLevel.Error:
+                    {
+                        infoBar.IsOpen = true;
+                        infoBar.Message = msg;
+                        infoBar.Severity = InfoBarSeverity.Error;
+                        break;
+                    }
+            }
+        });
     }
     #endregion
 
