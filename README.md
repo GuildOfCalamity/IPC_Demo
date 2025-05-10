@@ -17,6 +17,7 @@
 - There are multiple techniques for [IPC](https://learn.microsoft.com/en-us/windows/win32/ipc/interprocess-communications), e.g. **NamedPipes**, **FileMapping**, **DDE**, **RPC**, but I'll use **Sockets** in this demo.
 - Basic security options are offered, which include a 6 digit rotating PIN code.
 - This source also contains plenty of tips and tricks for any [WinUI 3](https://learn.microsoft.com/en-us/windows/apps/winui/winui3/) application.
+- I've also include an image signaling system via the [Compositor](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.composition.compositor?view=windows-app-sdk-1.7) using [VisualLayers](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.composition.visual?view=windows-app-sdk-1.7).
 - Don't forget to give a ⭐ if you find any of my code helpful or educational.
  
 ## 📷 Screenshots
