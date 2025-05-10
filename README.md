@@ -2,7 +2,7 @@
 
 ![Icon](Server/Assets/AppIcon.png)
 
-## 📝 v1.0.0.0 - April 2025
+## 📝 v1.0.0.0 - May 2025
 
 **Dependencies**
 
@@ -14,6 +14,7 @@
 
 ## 📰 Description
 - A [WinUI 3](https://learn.microsoft.com/en-us/windows/apps/winui/winui3/) app which uses TCP/IP to accept external application messages and display them.
+- There are multiple techniques for [IPC](https://learn.microsoft.com/en-us/windows/win32/ipc/interprocess-communications), e.g. **NamedPipes**, **FileMapping**, **DDE**, **RPC**, but I'll use **Sockets** in this demo.
 - Basic security options are offered, which include a 6 digit rotating PIN code.
 - This source also contains plenty of tips and tricks for any [WinUI 3](https://learn.microsoft.com/en-us/windows/apps/winui/winui3/) application.
 - Don't forget to give a ⭐ if you find any of my code helpful or educational.
