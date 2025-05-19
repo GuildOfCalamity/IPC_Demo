@@ -9,6 +9,22 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
+    <!--#region [Page Resources]-->
+    <Page.Resources>
+
+        <MenuFlyout x:Key="TabContextMenu">
+            <MenuFlyoutItem Click="OnPingClick" Text="Ping" />
+            <MenuFlyoutItem Click="OnDisconnectClick" Text="Disconnect" />
+            <MenuFlyoutItem Click="OnCloseTabClick" Text="Close" />
+        </MenuFlyout>
+
+        <Style TargetType="TabViewItem">
+            <Setter Property="ContextFlyout" Value="{StaticResource TabContextMenu}" />
+        </Style>
+
+    </Page.Resources>
+    <!--#endregion-->
+
     <Grid
         x:Name="root"
         Margin="10"
@@ -40,23 +56,103 @@
             </ProgressRing.RenderTransform>
         </ProgressRing>
 
-        <!--#region [IPC using TabView]-->
+        <!--#region [IPC using dynamic tabs]-->
         <TabView
+            x:Name="tvConnections"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
-            AllowDropTabs="False"
+            AllowDrop="True"
+            AllowDropTabs="True"
             Background="Transparent"
             BorderBrush="{ThemeResource GradientHeaderBrush}"
             BorderThickness="0"
-            CanDragTabs="False"
-            CanReorderTabs="False"
+            CanDragTabs="True"
+            CanReorderTabs="True"
+            CanTearOutTabs="False"
             CornerRadius="5"
             IsAddTabButtonVisible="False"
-            PointerMoved="UIElement_PointerMoved"
-            PointerPressed="UIElement_PointerPressed"
-            PointerReleased="UIElement_PointerReleased">
+            TabItemsSource="{x:Bind Connections, Mode=OneWay}">
+            <TabView.TabItemTemplate>
+                <DataTemplate x:DataType="local:TabItemViewModel">
+                    <TabViewItem Header="{x:Bind Header}" IconSource="{x:Bind Icon}">
+                        <ScrollViewer VerticalScrollMode="Auto">
+                            <ListView
+                                Margin="0,0,10,0"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Background="Transparent"
+                                ItemsSource="{x:Bind Messages}">
+                                <!--<ListView.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapGrid HorizontalChildrenAlignment="Left" Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ListView.ItemsPanel>-->
+                                <ListView.Transitions>
+                                    <TransitionCollection>
+                                        <EdgeUIThemeTransition />
+                                    </TransitionCollection>
+                                </ListView.Transitions>
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="local:ApplicationMessage">
+                                        <Grid
+                                            Margin="0,3,0,3"
+                                            PointerMoved="UIElement_PointerMoved"
+                                            PointerPressed="UIElement_PointerPressed"
+                                            PointerReleased="UIElement_PointerReleased">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition />
+                                                <RowDefinition />
+                                            </Grid.RowDefinitions>
+                                            <Grid Grid.Row="0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <ctrl:CompShadow
+                                                    Grid.Column="0"
+                                                    Margin="2,2,4,2"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    BlurRadius="1"
+                                                    OffsetX="1"
+                                                    OffsetY="1"
+                                                    ShadowOpacity="0.9"
+                                                    Color="{StaticResource TitleShadow}">
+                                                    <TextBlock
+                                                        FontSize="{StaticResource FontSizeMedium}"
+                                                        Foreground="{StaticResource PrimaryBrush}"
+                                                        Text="{x:Bind Module, Mode=OneWay}"
+                                                        TextWrapping="NoWrap" />
+                                                </ctrl:CompShadow>
+                                                <TextBlock
+                                                    Grid.Column="1"
+                                                    Margin="4,2,2,2"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="{StaticResource FontSizeNormal}"
+                                                    Foreground="{StaticResource HeaderBrush}"
+                                                    Text="{x:Bind MessageTime, Mode=OneWay, Converter={StaticResource StringToFormat}, ConverterParameter='{}{0:ddd, dd MMM yyyy – hh:mm:ss tt}'}"
+                                                    TextWrapping="NoWrap" />
+                                            </Grid>
+                                            <TextBlock
+                                                Grid.Row="1"
+                                                Margin="2"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                FontSize="{StaticResource FontSizeNormal}"
+                                                Foreground="{StaticResource SecondaryBrush}"
+                                                Text="{x:Bind MessageText, Mode=OneWay}"
+                                                TextWrapping="Wrap" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </ScrollViewer>
+                    </TabViewItem>
+                </DataTemplate>
+            </TabView.TabItemTemplate>
             <TabView.Resources>
-                <Thickness x:Key="TabViewButtonBorderThickness">1</Thickness>
+                <Thickness x:Key="TabViewButtonBorderThickness">3</Thickness>
                 <SolidColorBrush x:Key="TabViewItemHeaderBackgroundPointerOver" Color="#3F5FB2F2" />
                 <SolidColorBrush x:Key="TabViewItemHeaderBackgroundPressed" Color="#5F5FB2F2" />
                 <SolidColorBrush x:Key="TabViewItemHeaderBackgroundDisabled" Color="DimGray" />
@@ -74,7 +170,7 @@
                 </LinearGradientBrush>
             </TabView.Resources>
             <TabView.TabStripHeader>
-                <Grid x:Name="HeaderInset" Background="Transparent">
+                <Grid Background="Transparent">
                     <Image
                         x:Name="imgHeader"
                         Height="24"
@@ -87,306 +183,12 @@
             <TabView.TabStripFooter>
                 <Grid MinWidth="200" Background="Transparent">
                     <TextBlock
-                        x:Name="tsf"
-                        Margin="10,4,0,0"
+                        Margin="10,7,0,0"
                         VerticalAlignment="Center"
                         FontSize="{StaticResource FontSizeSmall}"
-                        Text="Status" />
+                        Text="{x:Bind FooterText, Mode=OneWay}" />
                 </Grid>
             </TabView.TabStripFooter>
-            <!--  1st Tab  -->
-            <TabViewItem
-                x:Name="tvi1"
-                Header="Available"
-                IsClosable="False">
-                <TabViewItem.IconSource>
-                    <FontIconSource Glyph="{StaticResource AllApps}" />
-                </TabViewItem.IconSource>
-                <ScrollViewer VerticalScrollMode="Auto">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <TextBlock
-                            Grid.Row="0"
-                            Margin="16,13"
-                            FontSize="{StaticResource FontSizeLarge}"
-                            Text="Messages" />
-                        <ListView
-                            x:Name="lvTab1Messages"
-                            Grid.Row="1"
-                            Margin="0,0,10,0"
-                            HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            Background="Transparent"
-                            Opacity="1">
-                            <!--
-                            <ListView.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapGrid HorizontalChildrenAlignment="Left" Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ListView.ItemsPanel>
-                            -->
-                            <ListView.Transitions>
-                                <TransitionCollection>
-                                    <EdgeUIThemeTransition />
-                                </TransitionCollection>
-                            </ListView.Transitions>
-                            <ListView.ItemTemplate>
-                                <DataTemplate x:DataType="local:ApplicationMessage">
-                                    <Grid
-                                        Margin="0,3,0,3"
-                                        PointerMoved="UIElement_PointerMoved"
-                                        PointerPressed="UIElement_PointerPressed"
-                                        PointerReleased="UIElement_PointerReleased">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition />
-                                            <RowDefinition />
-                                        </Grid.RowDefinitions>
-                                        <Grid Grid.Row="0">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <ctrl:CompShadow
-                                                Grid.Column="0"
-                                                Margin="2,2,4,2"
-                                                HorizontalAlignment="Left"
-                                                VerticalAlignment="Center"
-                                                BlurRadius="1"
-                                                OffsetX="1"
-                                                OffsetY="1"
-                                                ShadowOpacity="0.9"
-                                                Color="{StaticResource TitleShadow}">
-                                                <TextBlock
-                                                    FontSize="{StaticResource FontSizeMedium}"
-                                                    Foreground="{StaticResource PrimaryBrush}"
-                                                    Text="{x:Bind Module, Mode=OneWay}"
-                                                    TextWrapping="NoWrap" />
-                                            </ctrl:CompShadow>
-                                            <TextBlock
-                                                Grid.Column="1"
-                                                Margin="4,2,2,2"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Center"
-                                                FontSize="{StaticResource FontSizeNormal}"
-                                                Foreground="{StaticResource HeaderBrush}"
-                                                Text="{x:Bind MessageTime, Mode=OneWay, Converter={StaticResource StringToFormat}, ConverterParameter='{}{0:ddd, dd MMM yyyy – hh:mm:ss tt}'}"
-                                                TextWrapping="NoWrap" />
-                                        </Grid>
-                                        <TextBlock
-                                            Grid.Row="1"
-                                            Margin="2"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center"
-                                            FontSize="{StaticResource FontSizeNormal}"
-                                            Foreground="{StaticResource SecondaryBrush}"
-                                            Text="{x:Bind MessageText, Mode=OneWay}"
-                                            TextWrapping="Wrap" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-                    </Grid>
-                </ScrollViewer>
-            </TabViewItem>
-            <!--  2nd Tab  -->
-            <TabViewItem
-                x:Name="tvi2"
-                Header="Available"
-                IsClosable="False">
-                <TabViewItem.IconSource>
-                    <FontIconSource Glyph="{StaticResource AllApps}" />
-                </TabViewItem.IconSource>
-                <ScrollViewer VerticalScrollMode="Auto">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <TextBlock
-                            Grid.Row="0"
-                            Margin="16,13"
-                            FontSize="{StaticResource FontSizeLarge}"
-                            Text="Disallowed Sender" />
-                        <ListView
-                            x:Name="lvTab2Messages"
-                            Grid.Row="1"
-                            Margin="0,0,10,0"
-                            HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            Background="Transparent"
-                            Opacity="1">
-                            <!--
-                            <ListView.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapGrid HorizontalChildrenAlignment="Left" Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ListView.ItemsPanel>
-                            -->
-                            <ListView.Transitions>
-                                <TransitionCollection>
-                                    <EdgeUIThemeTransition />
-                                </TransitionCollection>
-                            </ListView.Transitions>
-                            <ListView.ItemTemplate>
-                                <DataTemplate x:DataType="local:ApplicationMessage">
-                                    <Grid
-                                        Margin="0,3,0,3"
-                                        PointerMoved="UIElement_PointerMoved"
-                                        PointerPressed="UIElement_PointerPressed"
-                                        PointerReleased="UIElement_PointerReleased">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition />
-                                            <RowDefinition />
-                                        </Grid.RowDefinitions>
-                                        <Grid Grid.Row="0">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <ctrl:CompShadow
-                                                Grid.Column="0"
-                                                Margin="2,2,4,2"
-                                                HorizontalAlignment="Left"
-                                                VerticalAlignment="Center"
-                                                BlurRadius="1"
-                                                OffsetX="1"
-                                                OffsetY="1"
-                                                ShadowOpacity="0.9"
-                                                Color="{StaticResource TitleShadow}">
-                                                <TextBlock
-                                                    FontSize="{StaticResource FontSizeMedium}"
-                                                    Foreground="{StaticResource PrimaryBrush}"
-                                                    Text="{x:Bind Module, Mode=OneWay}"
-                                                    TextWrapping="NoWrap" />
-                                            </ctrl:CompShadow>
-                                            <TextBlock
-                                                Grid.Column="1"
-                                                Margin="4,2,2,2"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Center"
-                                                FontSize="{StaticResource FontSizeNormal}"
-                                                Foreground="{StaticResource HeaderBrush}"
-                                                Text="{x:Bind MessageTime, Mode=OneWay, Converter={StaticResource StringToFormat}, ConverterParameter='{}{0:ddd, dd MMM yyyy – hh:mm:ss tt}'}"
-                                                TextWrapping="NoWrap" />
-                                        </Grid>
-                                        <TextBlock
-                                            Grid.Row="1"
-                                            Margin="2"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center"
-                                            FontSize="{StaticResource FontSizeNormal}"
-                                            Foreground="{StaticResource SecondaryBrush}"
-                                            Text="{x:Bind MessageText, Mode=OneWay}"
-                                            TextWrapping="Wrap" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-
-                    </Grid>
-                </ScrollViewer>
-            </TabViewItem>
-
-            <!--  3rd Tab  -->
-            <TabViewItem
-                x:Name="tvi3"
-                Header="Available"
-                IsClosable="False">
-                <TabViewItem.IconSource>
-                    <FontIconSource Glyph="{StaticResource AllApps}" />
-                </TabViewItem.IconSource>
-                <ScrollViewer VerticalScrollMode="Auto">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <TextBlock
-                            Grid.Row="0"
-                            Margin="16,13"
-                            FontSize="{StaticResource FontSizeLarge}"
-                            Text="Connection History" />
-                        <ListView
-                            x:Name="lvTab3Messages"
-                            Grid.Row="1"
-                            Margin="0,0,10,0"
-                            HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            Background="Transparent"
-                            Opacity="1">
-                            <!--
-                            <ListView.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapGrid HorizontalChildrenAlignment="Left" Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ListView.ItemsPanel>
-                            -->
-                            <ListView.Transitions>
-                                <TransitionCollection>
-                                    <EdgeUIThemeTransition />
-                                </TransitionCollection>
-                            </ListView.Transitions>
-                            <ListView.ItemTemplate>
-                                <DataTemplate x:DataType="local:ApplicationMessage">
-                                    <Grid
-                                        Margin="0,3,0,3"
-                                        PointerMoved="UIElement_PointerMoved"
-                                        PointerPressed="UIElement_PointerPressed"
-                                        PointerReleased="UIElement_PointerReleased">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition />
-                                            <RowDefinition />
-                                        </Grid.RowDefinitions>
-                                        <Grid Grid.Row="0">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <ctrl:CompShadow
-                                                Grid.Column="0"
-                                                Margin="2,2,4,2"
-                                                HorizontalAlignment="Left"
-                                                VerticalAlignment="Center"
-                                                BlurRadius="1"
-                                                OffsetX="1"
-                                                OffsetY="1"
-                                                ShadowOpacity="0.9"
-                                                Color="{StaticResource TitleShadow}">
-                                                <TextBlock
-                                                    FontSize="{StaticResource FontSizeMedium}"
-                                                    Foreground="{StaticResource PrimaryBrush}"
-                                                    Text="{x:Bind Module, Mode=OneWay}"
-                                                    TextWrapping="NoWrap" />
-                                            </ctrl:CompShadow>
-                                            <TextBlock
-                                                Grid.Column="1"
-                                                Margin="4,2,2,2"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Center"
-                                                FontSize="{StaticResource FontSizeNormal}"
-                                                Foreground="{StaticResource HeaderBrush}"
-                                                Text="{x:Bind MessageTime, Mode=OneWay, Converter={StaticResource StringToFormat}, ConverterParameter='{}{0:ddd, dd MMM yyyy – hh:mm:ss tt}'}"
-                                                TextWrapping="NoWrap" />
-                                        </Grid>
-                                        <TextBlock
-                                            Grid.Row="1"
-                                            Margin="2"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center"
-                                            FontSize="{StaticResource FontSizeNormal}"
-                                            Foreground="{StaticResource SecondaryBrush}"
-                                            Text="{x:Bind MessageText, Mode=OneWay}"
-                                            TextWrapping="Wrap" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-                    </Grid>
-                </ScrollViewer>
-            </TabViewItem>
         </TabView>
         <!--#endregion-->
 
@@ -418,6 +220,14 @@
             x:Name="layer2"
             Width="0"
             Height="0" />
+        <!--#endregion-->
+
+        <!--#region [Pulsing shadow test]-->
+        <Grid
+            x:Name="layer3"
+            Width="0"
+            Height="0"
+            Visibility="Collapsed" />
         <!--#endregion-->
 
     </Grid>

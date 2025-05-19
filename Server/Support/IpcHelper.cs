@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace IPC_Demo;
 /*
 
- ✅ Example usage (server)
+ Example usage (server)
 -----------------------------------------------
 var server = new IpcHelper(port: 32000);
 server.MessageReceived += (msg) => Console.WriteLine($"📨 Received: {msg}");
@@ -23,7 +23,7 @@ server.Start();
 // Call server.Stop() or server.Dispose() to shut down
 
 
- ✅ Sending message from external app (client)
+ Sending message from external app (client)
 -----------------------------------------------
 string json = JsonSerializer.Serialize(new IpcMessage { Type = "keycode", Payload = "12345678" });
 using (var client = new TcpClient())
@@ -95,7 +95,7 @@ public class IpcHelper : IDisposable
                 if (client != null)
                 {
                     if (_endpoints.ContainsKey(client.Client.LocalEndPoint!))
-                        Debug.WriteLine($"🔔 Client already connected at remote endpoint {client.Client.RemoteEndPoint}");
+                        Debug.WriteLine($"🔔 Client already connected at remote endpoint {Extensions.FormatEndPoint(client.Client.RemoteEndPoint)}");
                     else
                         _endpoints.Add(client.Client.LocalEndPoint!, DateTime.Now);
 

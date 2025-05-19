@@ -1,0 +1,220 @@
+﻿using System;
+using System.Linq;
+using Microsoft.UI.Xaml.Controls;
+
+namespace IPC_Demo;
+
+public static class SymbolIconHelper
+{
+    static readonly Symbol[] AllSymbols = Enum.GetValues(typeof(Symbol)).Cast<Symbol>().ToArray();
+
+    /// <summary>
+    /// Curated list of symbols to use in the app.
+    /// </summary>
+    static readonly Symbol[] SymbolTable = new[] {
+        Symbol.Accept                , // 57611
+        Symbol.Account               , // 57704
+        Symbol.Add                   , // 57609
+        Symbol.AddFriend             , // 57826
+        Symbol.Admin                 , // 57767
+        Symbol.AlignCenter           , // 57761
+        Symbol.AlignLeft             , // 57762
+        Symbol.AlignRight            , // 57760
+        Symbol.AllApps               , // 57721
+        Symbol.Attach                , // 57708
+        Symbol.AttachCamera          , // 57645
+        Symbol.Audio                 , // 57737
+        //Symbol.Back                  , // 57618
+        //Symbol.BackToWindow          , // 57816
+        Symbol.BlockContact          , // 57824
+        Symbol.Bold                  , // 57755
+        Symbol.Bookmarks             , // 57647
+        Symbol.BrowsePhotos          , // 57685
+        Symbol.Bullets               , // 57651
+        Symbol.Calculator            , // 57808
+        Symbol.Calendar              , // 57699
+        Symbol.CalendarDay           , // 57697
+        Symbol.CalendarReply         , // 57819
+        Symbol.CalendarWeek          , // 57698
+        Symbol.Camera                , // 57620
+        //Symbol.Cancel                , // 57610
+        Symbol.Caption               , // 57690
+        Symbol.CellPhone             , // 57801
+        //Symbol.Character             , // 57700
+        //Symbol.Clear                 , // 57606
+        Symbol.ClearSelection        , // 57797
+        Symbol.Clock                 , // 57633
+        Symbol.ClosedCaption         , // 57744
+        Symbol.ClosePane             , // 57639
+        Symbol.Comment               , // 57652
+        Symbol.Contact               , // 57661
+        Symbol.Contact2              , // 57735
+        Symbol.ContactInfo           , // 57654
+        Symbol.ContactPresence       , // 57729
+        Symbol.Copy                  , // 57711
+        Symbol.Crop                  , // 57635
+        Symbol.Cut                   , // 57707
+        Symbol.Delete                , // 57607
+        Symbol.Directions            , // 57809
+        Symbol.DisableUpdates        , // 57748
+        Symbol.DisconnectDrive       , // 57722
+        Symbol.Dislike               , // 57758
+        Symbol.DockBottom            , // 57671
+        Symbol.DockLeft              , // 57669
+        Symbol.DockRight             , // 57670
+        Symbol.Document              , // 57648
+        //Symbol.Download              , // 57624
+        Symbol.Edit                  , // 57604
+        Symbol.Emoji                 , // 57629
+        Symbol.Emoji2                , // 57712
+        Symbol.Favorite              , // 57619
+        Symbol.Filter                , // 57710
+        Symbol.Find                  , // 57626
+        Symbol.Flag                  , // 57641
+        Symbol.Folder                , // 57736
+        //Symbol.Font                  , // 57733
+        //Symbol.FontColor             , // 57734
+        //Symbol.FontDecrease          , // 57798
+        //Symbol.FontIncrease          , // 57799
+        //Symbol.FontSize              , // 57800
+        //Symbol.Forward               , // 57617
+        Symbol.FourBars              , // 57833
+        //Symbol.FullScreen            , // 57817
+        Symbol.GlobalNavigationButton, // 59136
+        Symbol.Globe                 , // 57643
+        //Symbol.Go                    , // 57667
+        Symbol.GoToStart             , // 57828
+        Symbol.GoToToday             , // 57732
+        Symbol.HangUp                , // 57655
+        Symbol.Help                  , // 57627
+        //Symbol.HideBcc               , // 57706
+        Symbol.Highlight             , // 57747
+        Symbol.Home                  , // 57615
+        //Symbol.Import                , // 57680
+        Symbol.ImportAll             , // 57681
+        //Symbol.Important             , // 57713
+        //Symbol.Italic                , // 57753
+        Symbol.Keyboard              , // 57668
+        Symbol.LeaveChat             , // 57631
+        Symbol.Library               , // 57811
+        Symbol.Like                  , // 57759
+        Symbol.LikeDislike           , // 57757
+        Symbol.Link                  , // 57703
+        Symbol.List                  , // 57676
+        Symbol.Mail                  , // 57625
+        Symbol.MailFilled            , // 57653
+        Symbol.MailForward           , // 57632
+        Symbol.MailReply             , // 57714
+        Symbol.MailReplyAll          , // 57701
+        Symbol.Manage                , // 57720
+        Symbol.Map                   , // 57796
+        Symbol.MapDrive              , // 57723
+        Symbol.MapPin                , // 57657
+        Symbol.Memo                  , // 57813
+        Symbol.Message               , // 57695
+        Symbol.Microphone            , // 57814
+        //Symbol.More                  , // 57612
+        Symbol.MoveToFolder          , // 57756
+        Symbol.MusicInfo             , // 57666
+        Symbol.Mute                  , // 57752
+        Symbol.NewFolder             , // 57818
+        Symbol.NewWindow             , // 57724
+        Symbol.Next                  , // 57601
+        Symbol.OneBar                , // 57830
+        Symbol.OpenFile              , // 57765
+        Symbol.OpenLocal             , // 57751
+        Symbol.OpenPane              , // 57638
+        Symbol.OpenWith              , // 57725
+        Symbol.Orientation           , // 57679
+        Symbol.OtherUser             , // 57766
+        Symbol.OutlineStar           , // 57806
+        Symbol.Page                  , // 57650
+        Symbol.Page2                 , // 57696
+        Symbol.Paste                 , // 57709
+        Symbol.Pause                 , // 57603
+        Symbol.People                , // 57637
+        Symbol.Permissions           , // 57746
+        Symbol.Phone                 , // 57658
+        Symbol.PhoneBook             , // 57812
+        Symbol.Pictures              , // 57688
+        Symbol.Pin                   , // 57665
+        Symbol.Placeholder           , // 57738
+        Symbol.Play                  , // 57602
+        Symbol.PostUpdate            , // 57815
+        Symbol.Preview               , // 58005
+        Symbol.PreviewLink           , // 57642
+        Symbol.Previous              , // 57600
+        Symbol.Print                 , // 59209
+        //Symbol.Priority              , // 57730
+        Symbol.ProtectedDocument     , // 57649
+        Symbol.Read                  , // 57702
+        Symbol.Redo                  , // 57613
+        Symbol.Refresh               , // 57673
+        //Symbol.Remote                , // 57672
+        //Symbol.Remove                , // 57608
+        Symbol.Rename                , // 57662
+        Symbol.Repair                , // 57694
+        Symbol.RepeatAll             , // 57805
+        Symbol.RepeatOne             , // 57804
+        Symbol.ReportHacked          , // 57822
+        Symbol.ReShare               , // 57802
+        Symbol.Rotate                , // 57674
+        Symbol.RotateCamera          , // 57636
+        Symbol.Save                  , // 57605
+        Symbol.SaveLocal             , // 57689
+        Symbol.Scan                  , // 58004
+        Symbol.SelectAll             , // 57678
+        Symbol.Send                  , // 57634
+        Symbol.SetLockScreen         , // 57740
+        Symbol.SetTile               , // 57741
+        Symbol.Setting               , // 57621
+        Symbol.Share                 , // 59181
+        Symbol.Shop                  , // 57677
+        //Symbol.ShowBcc               , // 57705
+        //Symbol.ShowResults           , // 57692
+        Symbol.Shuffle               , // 57675
+        Symbol.SlideShow             , // 57715
+        Symbol.SolidStar             , // 57807
+        Symbol.Sort                  , // 57716
+        Symbol.Stop                  , // 57691
+        Symbol.StopSlideShow         , // 57745
+        Symbol.Street                , // 57795
+        //Symbol.Switch                , // 57660
+        Symbol.SwitchApps            , // 57825
+        Symbol.Sync                  , // 57623
+        Symbol.SyncFolder            , // 57823
+        Symbol.Tag                   , // 57803
+        Symbol.Target                , // 57810
+        Symbol.ThreeBars             , // 57832
+        Symbol.TouchPointer          , // 57827
+        Symbol.Trim                  , // 57644
+        Symbol.TwoBars               , // 57831
+        Symbol.TwoPage               , // 57630
+        //Symbol.Underline             , // 57754
+        Symbol.Undo                  , // 57614
+        Symbol.UnFavorite            , // 57749
+        Symbol.UnPin                 , // 57750
+        Symbol.UnSyncFolder          , // 57821
+        //Symbol.Up                    , // 57616
+        Symbol.Upload                , // 57628
+        Symbol.Video                 , // 57622
+        Symbol.VideoChat             , // 57659
+        Symbol.View                  , // 57739
+        Symbol.ViewAll               , // 57656
+        Symbol.Volume                , // 57693
+        Symbol.WebCam                , // 57686
+        Symbol.World                 , // 57640
+        Symbol.XboxOneConsole        , // 59792
+        Symbol.ZeroBars              , // 57829
+        Symbol.Zoom                  , // 57763
+        Symbol.ZoomIn                , // 57646
+        Symbol.ZoomOut               , // 57764
+    };
+
+    public static SymbolIconSource GetRandomIcon()
+    {
+        var symbol = SymbolTable[Random.Shared.Next(SymbolTable.Length)];
+        //var symbol = AllSymbols[Random.Shared.Next(AllSymbols.Length)];
+        return new SymbolIconSource { Symbol = symbol };
+    }
+}

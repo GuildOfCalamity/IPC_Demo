@@ -66,6 +66,14 @@ public class Config
     [JsonPropertyName("transparency")]
     public bool transparency = false;
 
+    [JsonInclude]
+    [JsonPropertyName("trackmessages")]
+    public bool trackMessages = true;
+
+    [JsonInclude]
+    [JsonPropertyName("focusonmessage")]
+    public bool focusOnMessage = false;
+
     public override string ToString() => JsonSerializer.Serialize<Config>(this, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
 }
 

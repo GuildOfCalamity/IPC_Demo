@@ -5,15 +5,14 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Sockets;
 using System.Reflection;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Microsoft.UI;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -22,9 +21,6 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Windows.Storage.Streams;
-
-using Shared;
 
 namespace IPC_Demo;
 
@@ -44,17 +40,29 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     int _total = 0;
     bool _loaded = false;
     bool _toggle = false;
+    bool _stressTest = false;
+    readonly string _historyHeader = "Connection Activity";
     readonly int _maxMessages = 50;
     readonly ObservableCollection<ApplicationMessage>? _tab1Messages;
     readonly ObservableCollection<ApplicationMessage>? _tab2Messages;
     readonly ObservableCollection<ApplicationMessage>? _tab3Messages;
     public event PropertyChangedEventHandler? PropertyChanged;
     
+    static Shared.ValueStopwatch _vsw = Shared.ValueStopwatch.StartNew();
+    public ObservableCollection<TabItemViewModel> Connections { get; set; } = new();
+
     bool _isBusy = false;
     public bool IsBusy
     {
         get => _isBusy;
         set { _isBusy = value; NotifyPropertyChanged(nameof(IsBusy)); }
+    }
+
+    string _footerText = string.Empty;
+    public string FooterText
+    {
+        get => _footerText;
+        set { _footerText = value; NotifyPropertyChanged(nameof(FooterText)); }
     }
 
     public void NotifyPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = "")
@@ -75,60 +83,45 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
     public MainPage()
     {
+        _vsw = Shared.ValueStopwatch.StartNew();
+
+        if (App.Profile != null && App.Profile.logging)
+        {
+            Shared.Logger.SetLoggerFileName(App.GetCurrentAssemblyName()!);
+            Shared.Logger.SetLoggerFolderPath(AppDomain.CurrentDomain.BaseDirectory);
+        }
+
         this.InitializeComponent();
         this.Loaded += IpcPageOnLoaded;
         this.Unloaded += IpcPageOnUnloaded;
-        
-        try
-        {
-            // We could change this to dynamically create a tab when a new client
-            // connection occurs. But for now, we'll just use the first 3 tabs.
-            _tab1Messages = new();
-            Binding binding1 = new Binding { Mode = BindingMode.OneWay, Source = _tab1Messages };
-            BindingOperations.SetBinding(lvTab1Messages, ListView.ItemsSourceProperty, binding1);
-
-            _tab2Messages = new();
-            Binding binding2 = new Binding { Mode = BindingMode.OneWay, Source = _tab2Messages };
-            BindingOperations.SetBinding(lvTab2Messages, ListView.ItemsSourceProperty, binding2);
-
-            _tab3Messages = new();
-            Binding binding3 = new Binding { Mode = BindingMode.OneWay, Source = _tab3Messages };
-            BindingOperations.SetBinding(lvTab3Messages, ListView.ItemsSourceProperty, binding3);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"⚠ {MethodBase.GetCurrentMethod()?.DeclaringType?.Name}(Error): {ex.Message}");
-        }
     }
 
     #region [Page Events]
-    void IpcPageOnUnloaded(object sender, RoutedEventArgs e)
-    {
-        ipcServer?.Stop();
-        if (_tab1Messages != null && _tab1Messages.Count > 1)
-            App.MessageLog?.SaveData(_tab1Messages.ToList());
-    }
+
     void IpcPageOnLoaded(object sender, RoutedEventArgs e)
     {
         if (!_loaded && this.Content != null)
         {
             #region [Fetch previous messages]
-            try
+            if (App.Profile != null && App.Profile.trackMessages)
             {
-                int count = 0;
-                var prevMsgs = App.MessageLog?.GetData();
-                if (prevMsgs is not null)
+                try
                 {
-                    foreach (var msg in prevMsgs)
+                    int count = 0;
+                    var prevMsgs = App.MessageLog?.GetData();
+                    if (prevMsgs is not null)
                     {
-                        // Load messages as long as we aren't exceeding the limit and they're fresh.
-                        if (++count < _maxMessages && !msg.MessageTime.IsOlderThanDays(2d))
-                            _tab1Messages.Add(msg);
+                        foreach (var msg in prevMsgs)
+                        {
+                            // Load messages as long as we aren't exceeding the limit and they're fresh.
+                            if (++count < _maxMessages && !msg.MessageTime.IsOlderThanDays(2d))
+                                _tab1Messages.Add(msg);
+                        }
+                        Debug.WriteLine($"[INFO] {count} previous messages loaded");
                     }
-                    Debug.WriteLine($"[INFO] {count} previous messages loaded");
                 }
+                catch (Exception) { UpdateInfoBar($"Failed to load previous message list.", MessageLevel.Warning); }
             }
-            catch (Exception) { UpdateInfoBar($"Failed to load previous message list.", MessageLevel.Warning); }
             #endregion
 
             #region [Setup IPC and events]
@@ -138,50 +131,111 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             ipcServer.ErrorOccurred += IpcServer_ErrorOccurred;
             ipcServer.Start();
             #endregion
-
         }
 
         var workingCode = Shared.SecurityHelper.GenerateSecureCode6(_secret);
 
         #region [LED image toggle]
-        int attempts = 20;
+        int attempts = 30;
         string? asset = string.Empty;
-        while (--attempts > 0 && string.IsNullOrEmpty(asset) && (!asset.Contains("LED_") || !asset.Contains("Bulb_")))
+        while (--attempts > 0 && string.IsNullOrEmpty(asset) && (!asset.Contains("LED_") && !asset.Contains("Bulb_")))
         {
             asset = Path.GetFileName(GetRandomAsset(Path.Combine(AppContext.BaseDirectory, "Assets")));
+            Debug.WriteLine($"[INFO] Found asset '{asset}'");
         }
-        if (!string.IsNullOrEmpty(asset))
+        if (Debugger.IsAttached) { asset = "Bulb34_off.png"; }
+        InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 91, height: 91);
+        UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}    📷 {asset.Substring(0, asset.IndexOf("_"))}", MessageLevel.Information);
+        #endregion
+
+        #region [Pulsing Test]
+        if (layer3.Visibility == Visibility.Visible)
         {
-            InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 81, height: 81);
-            UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}    📷 {asset.Substring(0, asset.IndexOf("_"))}", MessageLevel.Information);
-        }
-        else
-        {
-            InitializeVisualCompositionLayers(asset: "LED18", width: 71, height: 71);
-            UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}", MessageLevel.Information);
+            float pulseWidth = 91;
+            float pulseHeight = 91;
+            PreloadVisualFrames(layer3, $"ms-appx:///Assets/LED65_alt.png", _visuals, Windows.UI.Color.FromArgb(255, 13, 210, 255), new System.Numerics.Vector3(0.5f, 0.5f, 0f), pulseWidth, pulseHeight, 0.9f);
+            // Auto-adjust the grid layer margins, they must match for the effect to be seamless.
+            layer3.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
+            {
+                layer3.HorizontalAlignment = HorizontalAlignment.Center;
+                layer3.VerticalAlignment = VerticalAlignment.Center;
+                layer3.Margin = new Thickness(-1 * pulseWidth, -1 * pulseHeight, 0, 0);
+                layer3.Margin = new Thickness(-1 * pulseWidth, -1 * pulseHeight, 0, 0);
+            });
+            _ = Task.Run(async () =>
+            {
+                bool linear = false;
+                await Task.Delay(500);
+
+                // Animate the LED image using the Compositor
+                while (!App.IsClosing)
+                {
+                    for (int i = 0; i < _visuals.Count; i++)
+                    {
+                        layer3.DispatcherQueue?.TryEnqueue(() => 
+                        { 
+                            if (i < _visuals.Count) // "i" is sometimes 10?
+                                SetVisualChild(layer3, _visuals[i]); 
+                        });
+
+                        if (linear)
+                            await Task.Delay(52);
+                        else
+                        {
+                            int slope = (int)Extensions.EaseInQuadratic(i * 10);
+                            var delay = (120 - Math.Min(119, slope)) + 18;
+                            await Task.Delay(delay);
+                        }
+                    }
+                    for (int i = _visuals.Count - 1; i > -1; i--)
+                    {
+                        layer3.DispatcherQueue?.TryEnqueue(() => 
+                        {
+                            if (i < _visuals.Count) // "i" is sometimes 10?
+                                SetVisualChild(layer3, _visuals[i]); 
+                        });
+
+                        if (linear)
+                            await Task.Delay(52);
+                        else
+                        {
+                            int slope = (int)Extensions.EaseInQuadratic(i * 10);
+                            var delay = (120 - Math.Min(119, slope)) + 18;
+                            await Task.Delay(delay);
+                        }
+                    }
+                }
+            });
         }
         #endregion
 
-
         _loaded = true;
+
+        if (App.Profile != null && App.Profile.logging)
+            Shared.Logger.Log($"{nameof(MainPage)} load took {_vsw.GetElapsedFriendly()}", "Statistics");
+        else
+            Debug.WriteLine($"[DEBUG] {nameof(MainPage)} load took {_vsw.GetElapsedFriendly()}");
+    }
+
+    void IpcPageOnUnloaded(object sender, RoutedEventArgs e)
+    {
+        ipcServer?.Stop();
+        if (App.Profile != null)
+        {
+            if (App.Profile.trackMessages)
+            {
+                if (_tab1Messages != null && _tab1Messages.Count > 1)
+                    App.MessageLog?.SaveData(_tab1Messages.ToList());
+            }
+
+            if (App.Profile.logging)
+            {
+                Shared.Logger.Log($"Application instance ran for {_vsw.GetElapsedFriendly()}", "Statistics");
+                Shared.Logger.ConfirmLogIsFlushed(2000);
+            }
+        }
     }
     #endregion
-
-    public string? GetRandomAsset(string assetsFolderPath)
-    {
-        if (!Directory.Exists(assetsFolderPath))
-            return null;
-
-        var pngFiles = Directory.EnumerateFiles(assetsFolderPath, "*.png", SearchOption.TopDirectoryOnly).ToList();
-
-        if (pngFiles.Count == 0)
-            return null;
-
-        var random = new Random();
-        int index = random.Next(pngFiles.Count);
-
-        return pngFiles[index];
-    }
 
     #region [IPC Events]
     /// <summary>
@@ -190,20 +244,77 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// <param name="err"><see cref="Exception"/></param>
     void IpcServer_ErrorOccurred(Exception err)
     {
+        string msg = $"Server Error: {err.Message}";
+
         if (_loaded)
         {
-            UpdateInfoBar($"Server Error: {err.Message}", MessageLevel.Error);
+            UpdateInfoBar(msg, MessageLevel.Error);
             SetVisualChild(layer2, _visualErr); // We're using the Compositor to swap the image, instead of the Image.Visibility trick.
         }
         else
-            Debug.WriteLine($"⚠ Server Error: {err.Message}");
+        {
+            Debug.WriteLine($"[ERROR] {msg}");
+        }
+
+        if (App.Profile != null && App.Profile.logging)
+            Shared.Logger.Log(msg, "IpcServer");
     }
 
     /// <summary>
-    /// JSON message received event
+    /// Common message received event. Will be used to handle connection history and other tabs.
+    /// </summary>
+    /// <param name="msg">raw, unformatted message data</param>
+    void IpcServer_MessageReceived(string msg)
+    {
+        // Deserialize the raw message
+        var obj = JsonSerializer.Deserialize<Shared.IpcMessage>(msg);
+        if (obj == null)
+            return;
+
+        this.DispatcherQueue.TryEnqueue(() =>
+        {
+            /** Connection History **/
+            if (!Connections.Any(Connections =>
+                Connections.Header.Equals(_historyHeader, StringComparison.OrdinalIgnoreCase)))
+            {
+                Debug.WriteLine($"[DEBUG] Creating connection history tab");
+                var histo = new TabItemViewModel
+                {
+                    Header = _historyHeader,
+                    Sender = obj.Sender,
+                    Icon = new SymbolIconSource { Symbol = Symbol.ZeroBars },
+                };
+                Connections.Add(histo);
+            }
+
+            var tvm = Connections.FirstOrDefault(Connections => Connections.Header.Equals(_historyHeader, StringComparison.OrdinalIgnoreCase));
+            if (tvm != null)
+            {
+                var dict = ipcServer?.GetConnectionHistory();
+                foreach (var item in dict)
+                {
+                    var conMsg = new ApplicationMessage
+                    {
+                        Module = ModuleId.IPC_Client,
+                        MessagePayload = $"{item.Key}",
+                        MessageText = $"💻 {Extensions.FormatEndPoint(item.Key)}    ⌚ {item.Value.ToJsonFriendlyFormat()}    ⏱️ {obj.Time}",
+                        MessageType = typeof(Shared.IpcMessage),
+                        MessageTime = DateTime.Now /* item.Value */,
+                    };
+                    tvm?.Messages?.Insert(0, conMsg);
+                }
+
+                if (Connections.Count == 1) // only do this on the first tab creation event
+                    tvConnections.SelectedItem = tvm; // force focus to new tab
+            }
+        });
+    }
+
+    /// <summary>
+    /// JSON message received event (dynamic tab creation)
     /// </summary>
     /// <param name="jmsg"><see cref="IpcMessage"/></param>
-    void IpcServer_JsonMessageReceived(IpcMessage jmsg)
+    void IpcServer_JsonMessageReceived(Shared.IpcMessage jmsg)
     {
         if (_loaded && jmsg != null)
         {
@@ -234,108 +345,155 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                 // Security check
                 if (Shared.SecurityHelper.VerifySecureCode6(jmsg.Secret, _secret))
                 {
+                    var appMsg = new ApplicationMessage
+                    {
+                        Module = ModuleId.IPC_Passed,
+                        MessagePayload = jmsg,
+                        MessageText = $"{jmsg}",
+                        MessageType = typeof(Shared.IpcMessage),
+                        MessageTime = jmsg.Time.ParseJsonDateTime(),
+                    };
+
                     this.DispatcherQueue.TryEnqueue(() =>
                     {
-                        /** Tab 1 (message details) **/
+                        // For stress-testing purposes, we can create a random char to append to the header.
+                        string test = string.Empty;
+                        if (_stressTest)
+                            test = AppendRandom();
 
-                        tsf.Text = $"Received msg #{++_total}";
-
-                        if (tvi1.Header != null && tvi1.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
-                            tvi1.Header = $"{jmsg.Sender}";
-                        else if (_tab1Messages.Count > _maxMessages)
-                            _tab1Messages.RemoveAt(_maxMessages);
-
-                        var appMsg = new ApplicationMessage
+                        // Does the connection already exist?
+                        if (!Connections.Any(Connections =>
+                            Connections.Header.Equals(Environment.MachineName + test, StringComparison.OrdinalIgnoreCase)))
                         {
-                            Module = ModuleId.IPC_Passed,
-                            MessagePayload = jmsg,
-                            MessageText = $"{jmsg}",
-                            MessageType = typeof(Shared.IpcMessage),
-                            MessageTime = jmsg.Time.ParseJsonDateTime(),
-                        };
-                        _tab1Messages?.Insert(0, appMsg);
+                            UpdateInfoBar($"Creating new tab for '{jmsg.Sender}{test}'", MessageLevel.Important);
+                            var tvm = new TabItemViewModel
+                            {
+                                Header = $"{Environment.MachineName}{test}",
+                                Sender = jmsg.Sender,
+                                Icon = SymbolIconHelper.GetRandomIcon(),
+                            };
+                            Connections.Add(tvm);
+
+                            if (Connections.Count == 1) // only do this on the first tab creation event
+                                tvConnections.SelectedItem = tvm; // force focus to new tab
+
+                            tvm.Messages.Insert(0, appMsg);
+
+                            // Update the footer (subtract one for history tab)
+                            FooterText = $"Connections: {Connections.Count - 1}";
+
+                           /**
+                            **  TODO: Check for old connections and remove them, or too many tabs being created.
+                            **/
+                        }
+                        else
+                        {
+                            var client = Connections.FirstOrDefault(Connections =>
+                                Connections.Header.Equals(Environment.MachineName + test, StringComparison.OrdinalIgnoreCase));
+
+                            if (client != null)
+                            {
+                                client?.Messages?.Insert(0, appMsg);
+                                if (client?.Messages?.Count > _maxMessages)
+                                    client?.Messages?.RemoveAt(_maxMessages);
+
+                                // Force focus to tab who received msg - can be crazy if you have many tabs open
+                                if (App.Profile != null && App.Profile.focusOnMessage)
+                                    tvConnections.SelectedItem = client;
+                            }
+                            else
+                                UpdateInfoBar($"⚠️ Failed to locate client tab for sender '{jmsg.Sender}'", MessageLevel.Warning);
+                        }
                     });
                 }
-                else
+                else // failed security check
                 {
+                    UpdateInfoBar($"⚠️ Failed security check for sender '{jmsg.Sender}'", MessageLevel.Error);
+                    if (App.Profile != null && App.Profile.logging)
+                        Shared.Logger.Log($"Failed security check for sender '{jmsg.Sender}'", "Security");
+
                     SetVisualChild(layer2, _visualErr); // We're using the Compositor to swap the image, instead of the Image.Visibility trick.
-                    this.DispatcherQueue.TryEnqueue(() =>
-                    {
-                        /** Tab 2 (failed security check) **/
 
-                        if (tvi2.Header != null && tvi2.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
-                            tvi2.Header = $"{jmsg.Sender}";
-                        else if (_tab2Messages.Count > _maxMessages)
-                            _tab2Messages.RemoveAt(_maxMessages);
-
-                        var appMsg = new ApplicationMessage
-                        {
-                            Module = ModuleId.IPC_Failed,
-                            MessagePayload = jmsg,
-                            MessageText = $"{jmsg}",
-                            MessageType = typeof(Shared.IpcMessage),
-                            MessageTime = jmsg.Time.ParseJsonDateTime(),
-                        };
-                        _tab2Messages?.Insert(0, appMsg);
-                    });
+                    //this.DispatcherQueue.TryEnqueue(() =>
+                    //{
+                    //    /** Tab for failed security check **/
+                    //
+                    //    var appMsg = new ApplicationMessage
+                    //    {
+                    //        Module = ModuleId.IPC_Failed,
+                    //        MessagePayload = jmsg,
+                    //        MessageText = $"{jmsg}",
+                    //        MessageType = typeof(Shared.IpcMessage),
+                    //        MessageTime = jmsg.Time.ParseJsonDateTime(),
+                    //    };
+                    //    _tabFails?.Insert(0, appMsg);
+                    //});
                 }
             }
             else
             {
-                Debug.WriteLine($"⚠ Disallowed/Unknown sender '{jmsg.Sender}'");
+                if (App.Profile != null && App.Profile.logging)
+                    Shared.Logger.Log($"Disallowed/Unknown sender '{jmsg.Sender}'", "Security");
+                else
+                    Debug.WriteLine($"⚠ Disallowed/Unknown sender '{jmsg.Sender}'");
             }
         }
         else
             Debug.WriteLine($"JSON 📨 {jmsg}");
     }
+    #endregion
 
-    /// <summary>
-    /// Message received event
-    /// </summary>
-    /// <param name="msg">raw message data</param>
-    void IpcServer_MessageReceived(string msg)
+    #region [MenuFlyout Events]
+    void OnDisconnectClick(object sender, RoutedEventArgs e)
     {
-        Debug.WriteLine($"Received 📨 {msg}");
-        this.DispatcherQueue.TryEnqueue(() =>
-        {
-            /** Tab 3 (connection history) **/
-
-            if (tvi3.Header != null && tvi3.Header is string hdr && hdr.Equals("Available", StringComparison.OrdinalIgnoreCase))
-                tvi3.Header = $"Connections";
-            else if (_tab3Messages.Count > _maxMessages)
-                _tab3Messages.RemoveAt(_maxMessages);
-
-            var obj = JsonSerializer.Deserialize<Shared.IpcMessage>(msg);
-            if (obj != null)
-            {
-                var dict = ipcServer.GetConnectionHistory();
-                foreach (var item in dict)
-                {
-                    var conMsg = new ApplicationMessage
-                    {
-                        Module = ModuleId.IPC_Client,
-                        MessagePayload = $"{item.Key}",
-                        MessageText = $"💻 {item.Key}    ⌚ {item.Value.ToJsonFriendlyFormat()}    ⏱️ {obj.Time}",
-                        MessageType = typeof(Shared.IpcMessage),
-                        MessageTime = DateTime.Now /* item.Value */,
-                    };
-                    //if (_tab3Messages.Count != dict.Count)
-                    _tab3Messages?.Insert(0, conMsg);
-                }
-            }
-        });
-
+        if (GetSelectedTabContext(sender) is TabItemViewModel vm)
+            Debug.WriteLine($"[EVENT] Disconnect {vm.Header}");
     }
 
+    void OnPingClick(object sender, RoutedEventArgs e)
+    {
+        if (GetSelectedTabContext(sender) is TabItemViewModel vm)
+            Debug.WriteLine($"[EVENT] Ping {vm.Header}");
+    }
+
+    void OnCloseTabClick(object sender, RoutedEventArgs e)
+    {
+        if (GetSelectedTabContext(sender) is TabItemViewModel vm && !vm.Header.Contains("Connection History"))
+            Connections.Remove(vm);
+    }
+
+    /// <summary>
+    /// Not needed, but this is where we could add a custom drag-n-drop handler.
+    /// </summary>
+    void MyTabView_TabDragCompleted(TabView sender, TabViewTabDragCompletedEventArgs args)
+    {
+        // Force UI collection to sync after drag
+        if (sender.TabItemsSource is ObservableCollection<TabItemViewModel> collection)
+        {
+            var reordered = sender.TabItems
+                .Cast<TabViewItem>()
+                .Select(tab => tab.DataContext as TabItemViewModel)
+                .Where(vm => vm != null)
+                .ToList();
+
+            collection.Clear();
+
+            foreach (var item in reordered!)
+            {
+                if (item != null)
+                    collection.Add(item);
+            }
+        }
+    }
     #endregion
 
     #region [Image toggle using Compositor]
-
     Microsoft.UI.Composition.SpriteVisual? _visualOn = null;  // green lighting
     Microsoft.UI.Composition.SpriteVisual? _visualAlt = null; // blue lighting
     Microsoft.UI.Composition.SpriteVisual? _visualWrn = null; // yellow lighting
     Microsoft.UI.Composition.SpriteVisual? _visualErr = null; // red lighting
     Microsoft.UI.Composition.SpriteVisual? _visualOff = null; // no color
+    List<Microsoft.UI.Composition.SpriteVisual> _visuals = new(); // testing varying glow strengths
 
     /// <summary>
     /// We're using the Compositor to swap the image, instead of the Image.Visibility trick.
@@ -356,8 +514,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         {
             layer1.HorizontalAlignment = layer2.HorizontalAlignment = HorizontalAlignment.Right;
             layer1.VerticalAlignment = layer2.VerticalAlignment = VerticalAlignment.Top;
-            layer1.Margin = new Thickness(0, -1 * (width * 0.05), width + (width * 0.25), 0);
-            layer2.Margin = new Thickness(0, -1 * (width * 0.05), width + (width * 0.25), 0);
+            layer1.Margin = new Thickness(0, -1 * (width * 0.44), width + (width * 2.5), 0);
+            layer2.Margin = new Thickness(0, -1 * (width * 0.44), width + (width * 2.5), 0);
         });
     }
 
@@ -367,7 +525,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// <param name="state"><c>true</c> for visible, <c>false</c> for invisible</param>
     public void ToggleVisual(bool state, Microsoft.UI.Composition.SpriteVisual? visual)
     {
-        if (visual == null)
+        if (visual == null || App.IsClosing)
             return;
 
         visual.IsVisible = state;
@@ -379,7 +537,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// <remarks>The <paramref name="visual"/> can be any <see cref="Microsoft.UI.Composition.ContainerVisual"/></remarks>
     public void SetVisualChild(FrameworkElement fe, Microsoft.UI.Composition.SpriteVisual? visual)
     {
-        if (fe == null)
+        if (fe == null || App.IsClosing)
             return;
 
         // We may be under a forked thread when called, so just to be safe we'll enqueue on FrameworkElement's dispatcher.
@@ -402,7 +560,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// <remarks>The layers will be applied in the order <b>layer1</b> then <b>layer2</b>.</remarks>
     public void SetLayeredVisuals(FrameworkElement fe, Microsoft.UI.Composition.SpriteVisual? layer1, Microsoft.UI.Composition.SpriteVisual? layer2)
     {
-        if (fe == null)
+        if (fe == null || App.IsClosing)
             return;
 
         var compositor = ElementCompositionPreview.GetElementVisual(fe).Compositor;
@@ -431,7 +589,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// <param name="layers">array of <see cref="Microsoft.UI.Composition.SpriteVisual"/>s</param>
     public void SetLayeredVisuals(FrameworkElement fe, params Microsoft.UI.Composition.SpriteVisual[] layers)
     {
-        if (fe == null)
+        if (fe == null || App.IsClosing)
             return;
 
         var compositor = ElementCompositionPreview.GetElementVisual(fe).Compositor;
@@ -459,7 +617,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// <remarks>The layers will be applied in the order <b>layer1</b> then <b>layer2</b>.</remarks>
     public void SetLayeredAbove(FrameworkElement fe, Microsoft.UI.Composition.SpriteVisual? layer1, Microsoft.UI.Composition.SpriteVisual? layer2)
     {
-        if (fe == null)
+        if (fe == null || App.IsClosing)
             return;
 
         var compositor = ElementCompositionPreview.GetElementVisual(fe).Compositor;
@@ -487,7 +645,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// <remarks>The layers will be applied in the order <b>layer1</b> then <b>layer2</b>.</remarks>
     public void SetLayeredBelow(FrameworkElement fe, Microsoft.UI.Composition.SpriteVisual? layer1, Microsoft.UI.Composition.SpriteVisual? layer2)
     {
-        if (fe == null)
+        if (fe == null || App.IsClosing)
             return;
 
         var compositor = ElementCompositionPreview.GetElementVisual(fe).Compositor;
@@ -512,14 +670,14 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// <param name="fe"></param>
     public void ClearVisualComposition(FrameworkElement fe)
     {
-        if (fe == null)
+        if (fe == null || App.IsClosing)
             return;
 
         ElementCompositionPreview.SetElementChildVisual(fe, null);
     }
 
     /// <summary>
-    /// This will lay down the <paramref name="uriAsset"/> image on the <see cref="FrameworkElement"/> using the Compositor.
+    /// This will lay down the <paramref name="uriAsset"/> image on the <see cref="FrameworkElement"/> using the <see cref="Microsoft.UI.Composition.Compositor"/>.
     /// If <paramref name="glowColor"/> is not <see cref="Microsoft.UI.Colors.Transparent"/>, a drop shadow will be applied.
     /// </summary>
     public void LoadVisualComposition(FrameworkElement fe, string uriAsset, out Microsoft.UI.Composition.SpriteVisual visual, Windows.UI.Color glowColor, System.Numerics.Vector3 offsetAdjustment, float width = 0, float height = 0, float opacity = 1)
@@ -571,7 +729,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             shadow.Opacity = 0.85f;
             shadow.Color = glowColor;
             shadow.BlurRadius = 30f;
-            shadow.Offset = new System.Numerics.Vector3(0, 0, -1);
+            shadow.Offset = new System.Numerics.Vector3(0, 1, -1);
             // Specify mask policy for shadow.
             shadow.SourcePolicy = Microsoft.UI.Composition.CompositionDropShadowSourcePolicy.InheritFromVisualContent;
 
@@ -587,6 +745,79 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
         // Set the visual onto the Image control (we'll do this later during state change)
         //ElementCompositionPreview.SetElementChildVisual(fe, visual);
+    }
+
+    /// <summary>
+    /// This will populate the <paramref name="visuals"/> with drop shadows using the <see cref="Microsoft.UI.Composition.Compositor"/>.
+    /// If <paramref name="glowColor"/> is not <see cref="Microsoft.UI.Colors.Transparent"/>, a drop shadow will be applied.
+    /// </summary>
+    public void PreloadVisualFrames(FrameworkElement fe, string uriAsset, List<Microsoft.UI.Composition.SpriteVisual> visuals, Windows.UI.Color glowColor, System.Numerics.Vector3 offsetAdjustment, float width = 0, float height = 0, float opacity = 1f)
+    {
+        if (visuals.Count > 0)
+            visuals.Clear();
+
+        Microsoft.UI.Xaml.Media.LoadedImageSurface? surface;
+        var targetVisual = ElementCompositionPreview.GetElementVisual(fe);
+        Microsoft.UI.Composition.Compositor? compositor = targetVisual.Compositor;
+
+        try
+        {
+            if (!string.IsNullOrEmpty(uriAsset))
+                surface = LoadedImageSurface.StartLoadFromUri(new Uri(uriAsset));
+            else
+                surface = LoadedImageSurface.StartLoadFromUri(new Uri($"ms-appx:///Assets/LED8_on.png"));
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"⚠ {MethodBase.GetCurrentMethod()?.Name}: {ex.Message}");
+            surface = null;
+        }
+
+        // Create a CompositionBrush and set the surface
+        var brush = compositor.CreateSurfaceBrush();
+        brush.Surface = surface;
+
+        // Create visuals with ascending amounts of glow
+        for (int i = 1; i < 11; i++)
+        {
+            // Create a visual sized to match the Image control
+            var visual = compositor.CreateSpriteVisual();
+            if (visual == null) { return; }
+            if ((width == 0 || height == 0) && fe.ActualSize != System.Numerics.Vector2.Zero)
+            {
+                visual.Size = new System.Numerics.Vector2((float)fe.ActualWidth, (float)fe.ActualHeight);
+                //targetVisual.CenterPoint = new System.Numerics.Vector3(fe.ActualSize.X / 2f, fe.ActualSize.Y / 2f, 0f);
+            }
+            else
+            {
+                visual.Size = new System.Numerics.Vector2(width, height);
+            }
+            visual.RelativeOffsetAdjustment = offsetAdjustment; // = new System.Numerics.Vector3(0.93f, 0.001f, 0f); // ⇦ Top-right corner
+            visual.Brush = brush;
+            visual.Opacity = opacity;
+
+            if (glowColor.A > 0x00 && glowColor != Microsoft.UI.Colors.Transparent)
+            {
+                // Create drop shadow (this is noticeable on a CompositionSurfaceBrush, but not on a CompositionColorBrush).
+                Microsoft.UI.Composition.DropShadow shadow = compositor.CreateDropShadow();
+                shadow.Opacity = 0.9f;
+                shadow.Color = glowColor;
+                shadow.BlurRadius = (float)i * 3.1f;
+                shadow.Offset = new System.Numerics.Vector3(0, 0, -1);
+                // Specify mask policy for shadow.
+                shadow.SourcePolicy = Microsoft.UI.Composition.CompositionDropShadowSourcePolicy.InheritFromVisualContent;
+                // Associate shadow with visual.
+                visual.Shadow = shadow;
+            }
+
+            //brush.Scale = new System.Numerics.Vector2 { X = 0.75f, Y = 0.75f };
+            brush.Stretch = Microsoft.UI.Composition.CompositionStretch.Uniform;
+            brush.BitmapInterpolationMode = Microsoft.UI.Composition.CompositionBitmapInterpolationMode.Linear;
+            visual.IsVisible = true; // can be used to toggle the image on/off
+
+            // Add the visual to our list
+            visuals.Add(visual);
+        }
     }
 
     public static void StackVisualsTest(UIElement targetElement)
@@ -619,7 +850,24 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     }
     #endregion
 
-    #region [Info/Slide Bar]
+    #region [Miscellaneous]
+    TabItemViewModel? GetSelectedTabContext(object sender)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is TabItemViewModel tvm1)
+            return tvm1;
+        else if (sender is TabViewItem tvi && tvi.DataContext is TabItemViewModel tvm2)
+            return tvm2;
+
+        return null;
+    }
+
+    public string AppendRandom()
+    {
+        const string idChars = "abcdefghijklmnopqrstuvwxyz";
+        char[] charArray = idChars.Distinct().ToArray();
+        return $"{charArray[Random.Shared.Next() % charArray.Length]}";
+    }
+
     void UpdateInfoBar(string msg, MessageLevel level = MessageLevel.Information)
     {
         if (App.IsClosing || this.Content == null)
@@ -666,6 +914,19 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     }
             }
         });
+    }
+
+    string GetRandomAsset(string assetsFolderPath)
+    {
+        if (!Directory.Exists(assetsFolderPath))
+            return string.Empty;
+
+        var pngFiles = Directory.EnumerateFiles(assetsFolderPath, "*.png", SearchOption.TopDirectoryOnly).ToList();
+
+        if (pngFiles.Count == 0)
+            return string.Empty;
+
+        return pngFiles[Random.Shared.Next(pngFiles.Count)];
     }
     #endregion
 

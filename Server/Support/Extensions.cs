@@ -10,7 +10,9 @@ using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Numerics;
 using System.Reflection;
 using System.Reflection.Metadata;
@@ -21,9 +23,11 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -49,6 +53,14 @@ public static class Extensions
         return Ptr != IntPtr.Zero && Ptr.ToInt64() != -1;
     }
 
+    public static string AsOneLine(this Exception ex, string spacer = " ⇒ ", string header = "[EXCEPTION]")
+    {
+        string result = header;
+        var exSplit = $"{ex}".Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Select((line) => $"{spacer}{line.Trim()}").ToArray();
+        foreach (var item in exSplit) { result += $"{item}"; }
+        return result;
+    }
+
     public static bool ContainsUnicode(this string text)
     {
         if (string.IsNullOrEmpty(text))
@@ -65,6 +77,70 @@ public static class Extensions
     {
         int minutesPassed = DateTime.Now.Minute;
         return 60 - minutesPassed;
+    }
+
+    /// <summary>
+    /// Extracts the port number from a Socket's RemoteEndPoint.
+    /// </summary>
+    /// <param name="socket">The Socket instance.</param>
+    /// <returns>The port number, or -1 if the RemoteEndPoint is null or not an IPEndPoint.</returns>
+    public static int GetRemotePort(this System.Net.Sockets.Socket socket)
+    {
+        if (socket?.RemoteEndPoint == null)
+            return -1;
+
+        if (socket.RemoteEndPoint is System.Net.IPEndPoint ipEndPoint)
+            return ipEndPoint.Port;
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Parses an endpoint string (e.g., "127.0.0.1:63908") and formats it.
+    /// </summary>
+    /// <param name="endPointString">The endpoint string to parse.</param>
+    /// <returns>A formatted string, or "Invalid endpoint/IP/port format" if parsing fails.</returns>
+    public static string FormatEndPoint(string endPointString)
+    {
+        if (string.IsNullOrWhiteSpace(endPointString))
+            return "Invalid endpoint format";
+        try
+        {
+            string[] parts = endPointString.Split(':');
+            if (parts.Length != 2)
+                return "Invalid endpoint format";
+
+            string ipAddressString = parts[0];
+            string portString = parts[1];
+
+            if (!IPAddress.TryParse(ipAddressString, out _))
+                return "Invalid IP address format";
+
+            if (!int.TryParse(portString, out int port))
+                return "Invalid port format";
+
+            return $"IP {ipAddressString}, port {port}";
+        }
+        catch (Exception)
+        {
+            return "Invalid endpoint format";
+        }
+    }
+
+    public static string FormatEndPoint(EndPoint? endPoint)
+    {
+        if (endPoint == null)
+            return "Invalid endpoint format";
+        try
+        {
+            string ipAddressString = endPoint.AddressFamily == AddressFamily.InterNetworkV6 ? ((IPEndPoint)endPoint).Address.ToString() : ((IPEndPoint)endPoint).Address.ToString();
+            string portString = ((IPEndPoint)endPoint).Port.ToString();
+            return $"IP {ipAddressString}, port {portString}";
+        }
+        catch (Exception)
+        {
+            return "Invalid endpoint format";
+        }
     }
 
     /// <summary>
@@ -105,10 +181,12 @@ public static class Extensions
 
     /// <summary>
     /// An unoptimized, home-brew parallel ForEach implementation.
+    /// Creates a sequence of tasks, each executing the action delegate with a corresponding item from the source sequence.
     /// </summary>
     public static void ParallelForEach<T>(IEnumerable<T> source, Action<T> action)
     {
-        IEnumerable<Task>? tasks = from item in source select Task.Run(() => action(item));
+        //IEnumerable<Task>? tasks = from item in source select Task.Run(() => action(item));
+        IEnumerable<Task>? tasks = source.Select(item => Task.Run(() => action(item)));
         Task.WaitAll(tasks.ToArray());
     }
 
@@ -204,11 +282,10 @@ public static class Extensions
         Task.WaitAll(tasks.ToArray());
     }
 
-
     /// <summary>
-    /// If not using a console app, set <paramref name="consoleApp"/> to false.
+    /// If using a console app, set <paramref name="consoleApp"/> to true.
     /// </summary>
-    /// <param name="task"><see cref="Task"/></param>
+    /// <param name="task"><see cref="Task"/> to execute</param>
     /// <param name="onSuccess"><see cref="Action"/> to perform if <see cref="TaskContinuationOptions.OnlyOnRanToCompletion"/></param>
     /// <param name="onCanceled"><see cref="Action"/> to perform if <see cref="TaskContinuationOptions.OnlyOnCanceled"/></param>
     /// <param name="onFaulted"><see cref="Action"/> to perform if <see cref="TaskContinuationOptions.OnlyOnFaulted"/></param>
@@ -3247,7 +3324,7 @@ public static class Extensions
         return (new string(result));
     }
 
-    static string GenerateTraceId(int length = 32)
+    public static string GenerateTraceId(int length = 32)
     {
         const string idChars = "0123456789abcdef";
         char[] charArray = idChars.Distinct().ToArray();
@@ -3547,6 +3624,64 @@ public static class Extensions
             To?.Flush();
             ProgressHandler?.Invoke(null, new ProgressChangedEventArgs(100, null));
         }
+    }
+
+    public static string ConvertToIndentedJson(this string jsonString)
+    {
+        if (string.IsNullOrWhiteSpace(jsonString))
+            return string.Empty;
+
+        try
+        {
+            using var document = JsonDocument.Parse(jsonString);
+            return System.Text.Json.JsonSerializer.Serialize(document.RootElement,
+                new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            Debug.WriteLine($"[ERROR] Line: {ex.LineNumber}, Position: {ex.BytePositionInLine}, Message: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ERROR] IndentedJson: {ex.Message}");
+        }
+        return "// Invalid JSON input";
+    }
+
+    public static string ConvertToIndentedXml(this string xmlString)
+    {
+        if (string.IsNullOrWhiteSpace(xmlString))
+            return string.Empty;
+
+        try
+        {
+            XDocument document = XDocument.Parse(xmlString);
+            var settings = new XmlWriterSettings
+            {
+                Indent = true,
+                IndentChars = "  ",
+                NewLineHandling = NewLineHandling.Entitize,
+                OmitXmlDeclaration = false
+            };
+
+            using (StringWriter stringWriter = new StringWriter())
+            {
+                using (XmlWriter writer = XmlWriter.Create(stringWriter, settings))
+                {
+                    document.Save(writer);
+                }
+                return stringWriter.ToString();
+            }
+        }
+        catch (XmlException ex)
+        {
+            Debug.WriteLine($"[ERROR] Line: {ex.LineNumber}, Position: {ex.LinePosition}, Message: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ERROR] IndentedXml: {ex.Message}");
+        }
+        return "<!-- Invalid XML input -->";
     }
 
     #region [Spans]

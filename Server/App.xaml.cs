@@ -65,7 +65,7 @@ public partial class App : Application
     public static Action<Windows.Graphics.SizeInt32>? WindowSizeChanged { get; set; }
 
     public static CancellationTokenSource? CoreToken;
-    static ValueStopwatch StopWatch { get; set; }
+    static Shared.ValueStopwatch StopWatch { get; set; }
 
     /// <summary>
     /// Starting with the Windows 10 Fall Creators Update, Visual Studio provides a new 
@@ -155,7 +155,7 @@ public partial class App : Application
         }
         #endregion
 
-        StopWatch = ValueStopwatch.StartNew();
+        StopWatch = Shared.ValueStopwatch.StartNew();
         BaseFolder = AppDomain.CurrentDomain.BaseDirectory;
         CoreToken = new CancellationTokenSource();
 
@@ -362,6 +362,8 @@ public partial class App : Application
                 windowWidth = m_width,
                 windowHeight = m_height,
                 firstRun = true,
+                trackMessages = true, 
+                topmost = false,
                 logging = false,
                 transparency = false,
                 port = 32000,
@@ -597,7 +599,7 @@ public partial class App : Application
     /// <summary>
     /// Returns the declaring type's namespace.
     /// </summary>
-    public static string? GetCurrentNamespace() => System.Reflection.MethodBase.GetCurrentMethod()?.DeclaringType?.Namespace;
+    public static string? GetCurrentNamespace() => System.Reflection.MethodBase.GetCurrentMethod()?.DeclaringType?.Namespace ?? "WinUI";
 
     /// <summary>
     /// Returns the declaring type's namespace.
@@ -607,17 +609,17 @@ public partial class App : Application
     /// <summary>
     /// Returns the declaring type's full name.
     /// </summary>
-    public static string? GetCurrentFullName() => System.Reflection.MethodBase.GetCurrentMethod()?.DeclaringType?.Assembly.FullName;
+    public static string? GetCurrentFullName() => System.Reflection.MethodBase.GetCurrentMethod()?.DeclaringType?.Assembly?.FullName ?? "WinUI";
 
     /// <summary>
     /// Returns the declaring type's assembly name.
     /// </summary>
-    public static string? GetCurrentAssemblyName() => System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+    public static string? GetCurrentAssemblyName() => System.Reflection.Assembly.GetExecutingAssembly()?.GetName()?.Name ?? "WinUI";
 
     /// <summary>
     /// Returns the AssemblyVersion, not the FileVersion.
     /// </summary>
-    public static string? GetCurrentAssemblyVersion() => $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}";
+    public static string? GetCurrentAssemblyVersion() => $"{System.Reflection.Assembly.GetExecutingAssembly()?.GetName()?.Version}";
 
     /// <summary>
     /// Returns the current assembly's folder location.
