@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 
 namespace Client;
 
@@ -21,6 +22,9 @@ public class Program
 
     static void Main(string[] args)
     {
+        int msSleep = 1500;
+        int totalCycles = 400;
+
         Console.OutputEncoding = Encoding.UTF8;
 
         // Check if we were passed a port option
@@ -37,11 +41,11 @@ public class Program
             }
         }
 
-        Console.WriteLine("🔔 Starting 10 minute IPC test…");
-        Thread.Sleep(2000);
+        Console.WriteLine($"🔔 Starting {ToReadableTime(totalCycles * msSleep)} IPC test…");
+        Thread.Sleep(2500);
 
         // Run a 10 minute test
-        for (int ipc = 0; ipc < 401; ipc++)
+        for (int ipc = 0; ipc < totalCycles + 1; ipc++)
         {
             if (_ipc != null)
             {
@@ -53,10 +57,43 @@ public class Program
                 Console.WriteLine("🔔 Creating IPC client…");
                 _ipc = new IpcClient(Port);
             }
-            Thread.Sleep(1500);
+            Thread.Sleep(msSleep);
         }
 
         Console.WriteLine("🔔 Test complete");
         Thread.Sleep(1000);
+    }
+
+    /// <summary>
+    /// Display a readable sentence as to when the time will happen.
+    /// e.g. "8 minutes 0 milliseconds"
+    /// </summary>
+    /// <param name="milliseconds">integer value</param>
+    /// <returns>human friendly format</returns>
+    static string ToReadableTime(int milliseconds)
+    {
+        if (milliseconds < 0)
+            throw new ArgumentException("Milliseconds cannot be negative.");
+
+        TimeSpan timeSpan = TimeSpan.FromMilliseconds(milliseconds);
+
+        if (timeSpan.TotalHours >= 1)
+        {
+            return string.Format("{0:0} hour{1} {2:0} minute{3}",
+                timeSpan.Hours, timeSpan.Hours == 1 ? "" : "s",
+                timeSpan.Minutes, timeSpan.Minutes == 1 ? "" : "s");
+        }
+        else if (timeSpan.TotalMinutes >= 1)
+        {
+            return string.Format("{0:0} minute{1} {2:0} second{3}",
+                timeSpan.Minutes, timeSpan.Minutes == 1 ? "" : "s",
+                timeSpan.Seconds, timeSpan.Seconds == 1 ? "" : "s");
+        }
+        else
+        {
+            return string.Format("{0:0} second{1} {2:0} millisecond{3}",
+                timeSpan.Seconds, timeSpan.Seconds == 1 ? "" : "s",
+                timeSpan.Milliseconds, timeSpan.Milliseconds == 1 ? "" : "s");
+        }
     }
 }

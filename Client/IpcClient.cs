@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -12,11 +13,22 @@ public class IpcClient
     public int Port { get; set; } = 32000;
     public string Host { get; set; } = "localhost";
 
+    static Shared.ValueStopwatch _vsw = Shared.ValueStopwatch.StartNew();
+
     public IpcClient(int port)
     {
         Port = port;
     }
 
+    /// <summary>
+    /// This could be changed to use one <see cref="TcpClient"/> for messages instead of
+    /// making a new <see cref="TcpClient.ConnectAsync(string, int)"/> each time, but
+    /// there is no memory leak with this technique and a <see cref="CancellationToken"/>
+    /// could be added to the <see cref="TcpClient.ConnectAsync(string, int)"/> for timeouts.
+    /// </summary>
+    /// <param name="type">the type of message</param>
+    /// <param name="payload">the data to send</param>
+    /// <param name="secret">the shared security key</param>
     public async void SendMessage(string type, string payload, string secret)
     {
         string json = JsonSerializer.Serialize(new Shared.IpcMessage
@@ -32,9 +44,13 @@ public class IpcClient
         {
             try
             {
+                _vsw = Shared.ValueStopwatch.StartNew();
+
                 await client.ConnectAsync(Host, Port);
                 using var writer = new StreamWriter(client.GetStream()) { AutoFlush = true };
                 await writer.WriteLineAsync(json);
+                
+                Debug.WriteLine($"[INFO] Connect and write took {_vsw.GetElapsedFriendly()}");
             }
             catch (SocketException ex)
             {
