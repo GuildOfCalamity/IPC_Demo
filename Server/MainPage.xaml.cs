@@ -40,6 +40,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     int _total = 0;
     bool _loaded = false;
     bool _toggle = false;
+    bool _randomAsset = false;
     bool _stressTest = false;
     readonly string _historyHeader = "Connection Activity";
     readonly int _maxMessages = 50;
@@ -136,15 +137,24 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         var workingCode = Shared.SecurityHelper.GenerateSecureCode6(_secret);
 
         #region [LED image toggle]
-        int attempts = 30;
         string? asset = string.Empty;
-        while (--attempts > 0 && string.IsNullOrEmpty(asset) && (!asset.Contains("LED_") && !asset.Contains("Bulb_")))
+        if (_randomAsset)
         {
-            asset = Path.GetFileName(GetRandomAsset(Path.Combine(AppContext.BaseDirectory, "Assets")));
-            Debug.WriteLine($"[INFO] Found asset '{asset}'");
+            int attempts = 30;
+            while (--attempts > 0 && string.IsNullOrEmpty(asset) && (!asset.Contains("LED_") && !asset.Contains("Bulb_")))
+            {
+                asset = Path.GetFileName(GetRandomAsset(Path.Combine(AppContext.BaseDirectory, "Assets")));
+                Debug.WriteLine($"[INFO] Found asset '{asset}'");
+            }
         }
-        if (Debugger.IsAttached) { asset = "Bulb34_off.png"; }
-        InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 91, height: 91);
+        else
+            asset = "Bulb34_off.png";
+        
+        if (_randomAsset)
+            InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 61, height: 61);
+        else
+            InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 131, height: 131);
+
         UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}    📷 {asset.Substring(0, asset.IndexOf("_"))}", MessageLevel.Information);
         #endregion
 
@@ -458,7 +468,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
     void OnCloseTabClick(object sender, RoutedEventArgs e)
     {
-        if (GetSelectedTabContext(sender) is TabItemViewModel vm && !vm.Header.Contains("Connection History"))
+        if (GetSelectedTabContext(sender) is TabItemViewModel vm && !vm.Header.Contains(_historyHeader))
             Connections.Remove(vm);
     }
 
@@ -514,8 +524,16 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         {
             layer1.HorizontalAlignment = layer2.HorizontalAlignment = HorizontalAlignment.Right;
             layer1.VerticalAlignment = layer2.VerticalAlignment = VerticalAlignment.Top;
-            layer1.Margin = new Thickness(0, -1 * (width * 0.44), width + (width * 2.5), 0);
-            layer2.Margin = new Thickness(0, -1 * (width * 0.44), width + (width * 2.5), 0);
+            if (_randomAsset)
+            {
+                layer1.Margin = new Thickness(0, -1 * (width * 0.1), width + (width * 0.2), 0);
+                layer2.Margin = new Thickness(0, -1 * (width * 0.1), width + (width * 0.2), 0);
+            }
+            else
+            {
+                layer1.Margin = new Thickness(0, -1 * (width * 0.3), width + (width * 2.2), 0);
+                layer2.Margin = new Thickness(0, -1 * (width * 0.3), width + (width * 2.2), 0);
+            }
         });
     }
 
