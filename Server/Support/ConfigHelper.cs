@@ -71,8 +71,8 @@ public class Config
     public bool trackMessages = true;
 
     [JsonInclude]
-    [JsonPropertyName("focusonmessage")]
-    public bool focusOnMessage = false;
+    [JsonPropertyName("highlightmostactive")]
+    public bool highlightMostActive = false;
 
     public override string ToString() => JsonSerializer.Serialize<Config>(this, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
 }

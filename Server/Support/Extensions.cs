@@ -4630,6 +4630,11 @@ public static class Extensions
     {
         return color.Lerp(Colors.Black, amount);
     }
+    public static Microsoft.UI.Xaml.Media.SolidColorBrush CreateDarkerBrush(this Microsoft.UI.Xaml.Media.SolidColorBrush brush)
+    {
+        var darker = brush.Color.DarkerBy(0.135f);
+        return new Microsoft.UI.Xaml.Media.SolidColorBrush(darker);
+    }
 
     /// <summary>
     /// Lightens the color by the given percentage using lerp.
@@ -4640,6 +4645,11 @@ public static class Extensions
     public static Windows.UI.Color LighterBy(this Windows.UI.Color color, float amount)
     {
         return color.Lerp(Colors.White, amount);
+    }
+    public static Microsoft.UI.Xaml.Media.SolidColorBrush CreateLighterBrush(this Microsoft.UI.Xaml.Media.SolidColorBrush brush)
+    {
+        var lighter = brush.Color.LighterBy(0.135f);
+        return new Microsoft.UI.Xaml.Media.SolidColorBrush(lighter);
     }
 
     /// <summary>

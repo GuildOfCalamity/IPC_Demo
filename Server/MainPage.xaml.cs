@@ -41,7 +41,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     bool _loaded = false;
     bool _toggle = false;
     bool _randomAsset = false;
-    bool _stressTest = false;
+    bool _stressTest = true;
     readonly string _historyHeader = "Connection Activity";
     readonly int _maxMessages = 50;
     readonly ObservableCollection<ApplicationMessage>? _tab1Messages;
@@ -148,7 +148,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         }
         else
-            asset = "Bulb34_off.png";
+            asset = "Bulb39_off.png";
         
         if (_randomAsset)
             InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 61, height: 61);
@@ -283,7 +283,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
         this.DispatcherQueue.TryEnqueue(() =>
         {
-            /** Connection History **/
+            #region [Connection History]
             if (!Connections.Any(Connections =>
                 Connections.Header.Equals(_historyHeader, StringComparison.OrdinalIgnoreCase)))
             {
@@ -312,11 +312,14 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                         MessageTime = DateTime.Now /* item.Value */,
                     };
                     tvm?.Messages?.Insert(0, conMsg);
+                    if (tvm?.Messages?.Count > _maxMessages)
+                        tvm?.Messages?.RemoveAt(_maxMessages);
                 }
 
                 if (Connections.Count == 1) // only do this on the first tab creation event
                     tvConnections.SelectedItem = tvm; // force focus to new tab
             }
+            #endregion
         });
     }
 
@@ -366,7 +369,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
                     this.DispatcherQueue.TryEnqueue(() =>
                     {
-                        // For stress-testing purposes, we can create a random char to append to the header.
+                        // For stress-testing purposes we can append a random char to the header so
+                        // it appears like more than one application is connecting to our server.
                         string test = string.Empty;
                         if (_stressTest)
                             test = AppendRandom();
@@ -398,18 +402,21 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                         }
                         else
                         {
-                            var client = Connections.FirstOrDefault(Connections =>
+                            var existing = Connections.FirstOrDefault(Connections =>
                                 Connections.Header.Equals(Environment.MachineName + test, StringComparison.OrdinalIgnoreCase));
 
-                            if (client != null)
+                            if (existing != null)
                             {
-                                client?.Messages?.Insert(0, appMsg);
-                                if (client?.Messages?.Count > _maxMessages)
-                                    client?.Messages?.RemoveAt(_maxMessages);
+                                existing?.Messages?.Insert(0, appMsg);
+                                if (existing?.Messages?.Count > _maxMessages)
+                                    existing?.Messages?.RemoveAt(_maxMessages);
 
-                                // Force focus to tab who received msg - can be crazy if you have many tabs open
-                                if (App.Profile != null && App.Profile.focusOnMessage)
-                                    tvConnections.SelectedItem = client;
+                                // Modify the color on the tab who's most active
+                                if (App.Profile != null && App.Profile.highlightMostActive)
+                                {
+                                    existing?.RegisterActivity();
+                                    CheckForMoreActiveClient(existing);
+                                }
                             }
                             else
                                 UpdateInfoBar($"⚠️ Failed to locate client tab for sender '{jmsg.Sender}'", MessageLevel.Warning);
@@ -531,8 +538,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
             else
             {
-                layer1.Margin = new Thickness(0, -1 * (width * 0.3), width + (width * 2.2), 0);
-                layer2.Margin = new Thickness(0, -1 * (width * 0.3), width + (width * 2.2), 0);
+                layer1.Margin = new Thickness(0, -1 * (width * 0.3), width + (width * 1.5), 0);
+                layer2.Margin = new Thickness(0, -1 * (width * 0.3), width + (width * 1.5), 0);
             }
         });
     }
@@ -869,6 +876,38 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     #endregion
 
     #region [Miscellaneous]
+    void CheckForMoreActiveClient(TabItemViewModel? triggeringVM, int threshold = 3)
+    {
+        if (triggeringVM == null || App.IsClosing)
+            return;
+
+        // Get the current most active connection
+        var mostActive = Connections.OrderByDescending(vm => vm.ActivityScore).FirstOrDefault();
+        if (mostActive == triggeringVM && mostActive != tvConnections.SelectedItem && mostActive.ActivityScore >= threshold)
+        {
+            // Set focus to the most active connection
+            //tvConnections.SelectedItem = mostActive;
+
+            if (triggeringVM.ActivityScore < threshold * 2.6)
+            {
+                Debug.WriteLine($"📢 Setting lighter brush, Score={triggeringVM.ActivityScore}");
+                // Just toggle color for the most active connection
+                triggeringVM.ToggleColor = triggeringVM.ToggleColor.CreateLighterBrush(); //new SolidColorBrush(Microsoft.UI.Colors.Orchid);
+            }
+            else
+            {
+                Debug.WriteLine($"📢 Skipping lighter brush, Score={triggeringVM.ActivityScore}");
+            }
+        }
+
+        // Run a decay cycle
+        var list = Connections.OrderByDescending(vm => vm.ActivityScore);
+        foreach (var vm in list)
+        {
+            vm.DecayActivity();
+        }
+    }
+
     TabItemViewModel? GetSelectedTabContext(object sender)
     {
         if (sender is FrameworkElement fe && fe.DataContext is TabItemViewModel tvm1)
@@ -881,7 +920,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
     public string AppendRandom()
     {
-        const string idChars = "abcdefghijklmnopqrstuvwxyz";
+        const string idChars = "abc";  // "abcdefghijklmnopqrstuvwxyz";
         char[] charArray = idChars.Distinct().ToArray();
         return $"{charArray[Random.Shared.Next() % charArray.Length]}";
     }

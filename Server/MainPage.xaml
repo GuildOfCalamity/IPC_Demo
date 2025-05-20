@@ -74,14 +74,17 @@
             TabItemsSource="{x:Bind Connections, Mode=OneWay}">
             <TabView.TabItemTemplate>
                 <DataTemplate x:DataType="local:TabItemViewModel">
-                    <TabViewItem Header="{x:Bind Header}" IconSource="{x:Bind Icon}">
+                    <TabViewItem
+                        Background="{x:Bind ToggleColor, Mode=OneWay}"
+                        Header="{x:Bind Header, Mode=OneWay}"
+                        IconSource="{x:Bind Icon, Mode=OneWay}">
                         <ScrollViewer VerticalScrollMode="Auto">
                             <ListView
                                 Margin="0,0,10,0"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
                                 Background="Transparent"
-                                ItemsSource="{x:Bind Messages}">
+                                ItemsSource="{x:Bind Messages, Mode=OneWay}">
                                 <!--<ListView.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapGrid HorizontalChildrenAlignment="Left" Orientation="Horizontal" />
@@ -152,7 +155,7 @@
                 </DataTemplate>
             </TabView.TabItemTemplate>
             <TabView.Resources>
-                <Thickness x:Key="TabViewButtonBorderThickness">3</Thickness>
+                <Thickness x:Key="TabViewButtonBorderThickness">1</Thickness>
                 <SolidColorBrush x:Key="TabViewItemHeaderBackgroundPointerOver" Color="#3F5FB2F2" />
                 <SolidColorBrush x:Key="TabViewItemHeaderBackgroundPressed" Color="#5F5FB2F2" />
                 <SolidColorBrush x:Key="TabViewItemHeaderBackgroundDisabled" Color="DimGray" />
