@@ -77,7 +77,8 @@
                     <TabViewItem
                         Background="{x:Bind ToggleColor, Mode=OneWay}"
                         Header="{x:Bind Header, Mode=OneWay}"
-                        IconSource="{x:Bind Icon, Mode=OneWay}">
+                        IconSource="{x:Bind Icon, Mode=OneWay}"
+                        Loaded="TabViewItemOnLoaded">
                         <ScrollViewer VerticalScrollMode="Auto">
                             <ListView
                                 Margin="0,0,10,0"

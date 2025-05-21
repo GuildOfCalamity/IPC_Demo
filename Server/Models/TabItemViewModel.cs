@@ -17,7 +17,8 @@ public class TabItemViewModel : INotifyPropertyChanged
     public ObservableCollection<ApplicationMessage> Messages { get; set; } = new();
 
     /// <summary>
-    /// We need the INotifyPropertyChanged for this to work during runtime.
+    /// We need the <see cref="System.ComponentModel.INotifyPropertyChanged"/> for this to work during runtime.
+    /// If you didn't wire up OnPropertyChanged(), then this would only update once during initialization.
     /// </summary>
     private SolidColorBrush _toggleColor = baseBrush;
     public SolidColorBrush ToggleColor
@@ -29,6 +30,7 @@ public class TabItemViewModel : INotifyPropertyChanged
     #region [Activity Tracking]
     public DateTime LastActivity { get; set; } = DateTime.MinValue;
     public int ActivityScore { get; set; } = 0;
+    public double DecaySeconds { get; set; } = 30;
     public void RegisterActivity()
     {
         LastActivity = DateTime.Now;
@@ -36,7 +38,7 @@ public class TabItemViewModel : INotifyPropertyChanged
     }
     public void DecayActivity()
     {
-        if ((DateTime.Now - LastActivity).TotalSeconds >= 5)
+        if ((DateTime.Now - LastActivity).TotalSeconds >= DecaySeconds)
         {
             ActivityScore = 0;
             ToggleColor = baseBrush;
@@ -44,6 +46,8 @@ public class TabItemViewModel : INotifyPropertyChanged
     }
     #endregion
 
+    #region [INotifyPropertyChanged]
     public event PropertyChangedEventHandler? PropertyChanged;
     private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    #endregion
 }

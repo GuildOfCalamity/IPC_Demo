@@ -33,6 +33,33 @@
                         <FontIcon Glyph="{StaticResource ActionCenter}" />
                     </MenuFlyoutItem.Icon>
                 </MenuFlyoutItem>
+                <MenuFlyoutItem
+                    Click="MenuFlyoutItemOnClick"
+                    Tag="ActionHeatMap"
+                    Text="Toggle Most Active"
+                    ToolTipService.ToolTip="Enables or disables the heat mapping">
+                    <MenuFlyoutItem.Icon>
+                        <FontIcon Glyph="{StaticResource World}" />
+                    </MenuFlyoutItem.Icon>
+                </MenuFlyoutItem>
+                <MenuFlyoutItem
+                    Click="MenuFlyoutItemOnClick"
+                    Tag="ActionLogging"
+                    Text="Toggle Logging"
+                    ToolTipService.ToolTip="Enables or disables the app-wide logger">
+                    <MenuFlyoutItem.Icon>
+                        <FontIcon Glyph="{StaticResource AllApps}" />
+                    </MenuFlyoutItem.Icon>
+                </MenuFlyoutItem>
+                <MenuFlyoutItem
+                    Click="MenuFlyoutItemOnClick"
+                    Tag="ActionRestoreMessages"
+                    Text="Toggle Message Retention"
+                    ToolTipService.ToolTip="Enables or disables the storage of previous session messages">
+                    <MenuFlyoutItem.Icon>
+                        <FontIcon Glyph="{StaticResource Admin}" />
+                    </MenuFlyoutItem.Icon>
+                </MenuFlyoutItem>
                 <MenuFlyoutSeparator Width="200" />
                 <MenuFlyoutItem
                     Click="MenuFlyoutItemOnClick"

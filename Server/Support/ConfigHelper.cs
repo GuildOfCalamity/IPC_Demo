@@ -71,6 +71,10 @@ public class Config
     public bool trackMessages = true;
 
     [JsonInclude]
+    [JsonPropertyName("maxmessages")]
+    public int maxMessages = 50;
+
+    [JsonInclude]
     [JsonPropertyName("highlightmostactive")]
     public bool highlightMostActive = false;
 

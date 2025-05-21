@@ -197,11 +197,40 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
                     return;
                 
                 // Toggle transparency flag
-                if (App.Profile!.transparency)
-                    App.Profile!.transparency = false;
+                App.Profile.transparency = !App.Profile.transparency;
 
-                else
-                    App.Profile!.transparency = true;
+                // We could save later when the window close event occurs.
+                ConfigHelper.SaveConfig(App.Profile);
+            }
+            else if (!string.IsNullOrEmpty(tag) && tag.Equals("ActionHeatMap", StringComparison.OrdinalIgnoreCase))
+            {
+                if (App.Profile == null)
+                    return;
+
+                // Toggle heat map flag
+                App.Profile.highlightMostActive = !App.Profile.highlightMostActive;
+
+                // We could save later when the window close event occurs.
+                ConfigHelper.SaveConfig(App.Profile);
+            }
+            else if (!string.IsNullOrEmpty(tag) && tag.Equals("ActionLogging", StringComparison.OrdinalIgnoreCase))
+            {
+                if (App.Profile == null)
+                    return;
+
+                // Toggle app-wide logger
+                App.Profile.logging = !App.Profile.logging;
+
+                // We could save later when the window close event occurs.
+                ConfigHelper.SaveConfig(App.Profile);
+            }
+            else if (!string.IsNullOrEmpty(tag) && tag.Equals("ActionRestoreMessages", StringComparison.OrdinalIgnoreCase))
+            {
+                if (App.Profile == null)
+                    return;
+
+                // Toggle storage of messages to disk
+                App.Profile.trackMessages = !App.Profile.trackMessages;
 
                 // We could save later when the window close event occurs.
                 ConfigHelper.SaveConfig(App.Profile);

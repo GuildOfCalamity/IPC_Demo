@@ -37,13 +37,12 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     string _secret { get; set; } = "9hOfBy7beK0x3zX4";
 
     IpcHelper? ipcServer = null;
-    int _total = 0;
     bool _loaded = false;
     bool _toggle = false;
     bool _randomAsset = false;
     bool _stressTest = true;
+    int _maxMessages = 50;
     readonly string _historyHeader = "Connection Activity";
-    readonly int _maxMessages = 50;
     readonly ObservableCollection<ApplicationMessage>? _tab1Messages;
     readonly ObservableCollection<ApplicationMessage>? _tab2Messages;
     readonly ObservableCollection<ApplicationMessage>? _tab3Messages;
@@ -90,6 +89,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         {
             Shared.Logger.SetLoggerFileName(App.GetCurrentAssemblyName()!);
             Shared.Logger.SetLoggerFolderPath(AppDomain.CurrentDomain.BaseDirectory);
+            _maxMessages = App.Profile.maxMessages > 0 ? App.Profile.maxMessages : 50;
         }
 
         this.InitializeComponent();
@@ -148,7 +148,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         }
         else
-            asset = "Bulb39_off.png";
+            asset = "Bulb50_off.png";
         
         if (_randomAsset)
             InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 61, height: 61);
@@ -243,6 +243,28 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                 Shared.Logger.Log($"Application instance ran for {_vsw.GetElapsedFriendly()}", "Statistics");
                 Shared.Logger.ConfirmLogIsFlushed(2000);
             }
+        }
+    }
+
+    void TabViewItemOnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is TabViewItem tab && tab.DataContext is TabItemViewModel tvm)
+        {
+            Debug.WriteLine($"[OnLoaded Event] ViewModel header: {tvm.Header}");
+
+            //PropertyChangedEventHandler? handler = (_, args) => 
+            //{
+            //    Debug.WriteLine($"📢 Examining property '{args.PropertyName}'");
+            //    if (args.PropertyName == nameof(tvm.ActivityScore) && tvm.ActivityScore > 0)
+            //    {
+            //        _ = this.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
+            //        {
+            //            VisualStateManager.GoToState(tab, "Active", true);
+            //        });
+            //    }
+            //};
+            //tvm.PropertyChanged -= handler; // remove any existing subscriptions
+            //tvm.PropertyChanged += handler;
         }
     }
     #endregion
@@ -384,6 +406,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                             {
                                 Header = $"{Environment.MachineName}{test}",
                                 Sender = jmsg.Sender,
+                                DecaySeconds = _stressTest ? 7 : 30,
                                 Icon = SymbolIconHelper.GetRandomIcon(),
                             };
                             Connections.Add(tvm);
@@ -415,7 +438,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                                 if (App.Profile != null && App.Profile.highlightMostActive)
                                 {
                                     existing?.RegisterActivity();
-                                    CheckForMoreActiveClient(existing);
+                                    CheckForMoreActiveClientWide(existing);
                                 }
                             }
                             else
@@ -876,31 +899,78 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     #endregion
 
     #region [Miscellaneous]
-    void CheckForMoreActiveClient(TabItemViewModel? triggeringVM, int threshold = 3)
+    /// <summary>
+    /// Every time a message is received, we check all tabs to see which is most active.
+    /// </summary>
+    /// <param name="triggeringVM">the view model that triggered this check</param>
+    /// <param name="threshold">the activity score to compare against</param>
+    void CheckForMoreActiveClientWide(TabItemViewModel? triggeringVM, int threshold = 3)
+    {
+        if (triggeringVM == null || App.IsClosing)
+            return;
+
+        // Get the current most active connection
+        var list = Connections.OrderByDescending(vm => vm.ActivityScore);
+        foreach (var mostActive in list)
+        {
+            if (mostActive.Header.Contains(_historyHeader))
+                continue; // skip the history tab, it won't be relevant here since we don't call RegisterActivity()
+
+            // Heat-map the most active connection
+            if (mostActive.ActivityScore >= threshold)
+            {
+                if (mostActive.ActivityScore < threshold * 4)
+                {
+                    Debug.WriteLine($"📢 Modifying {mostActive.Header}'s brush. Score={mostActive.ActivityScore}");
+                    // Just toggle color for the most active connection
+                    mostActive.ToggleColor = mostActive.ToggleColor.CreateLighterBlue(); //new SolidColorBrush(Microsoft.UI.Colors.Orchid);
+                }
+                else
+                {
+                    Debug.WriteLine($"📢 Skipping {mostActive.Header}'s brush change. Score={mostActive.ActivityScore}");
+                }
+            }
+
+            // Run a decay cycle on each tab model
+            mostActive.DecayActivity();
+        }
+    }
+
+    /// <summary>
+    /// Every time a message is received, we check only the triggering tabs to see if it's the most active client.
+    /// </summary>
+    /// <param name="triggeringVM">the view model that triggered this check</param>
+    /// <param name="threshold">the activity score to compare against</param>
+    void CheckForMoreActiveClientSlim(TabItemViewModel? triggeringVM, int threshold = 3)
     {
         if (triggeringVM == null || App.IsClosing)
             return;
 
         // Get the current most active connection
         var mostActive = Connections.OrderByDescending(vm => vm.ActivityScore).FirstOrDefault();
-        if (mostActive == triggeringVM && mostActive != tvConnections.SelectedItem && mostActive.ActivityScore >= threshold)
-        {
-            // Set focus to the most active connection
-            //tvConnections.SelectedItem = mostActive;
 
-            if (triggeringVM.ActivityScore < threshold * 2.6)
+        //if (mostActive == triggeringVM && mostActive != tvConnections.SelectedItem && mostActive.ActivityScore >= threshold)
+        //{
+        //    // Set focus to the most active connection
+        //    tvConnections.SelectedItem = mostActive;
+        //}
+
+        // Heat-map the most active connection
+        if (mostActive == triggeringVM && mostActive.ActivityScore >= threshold)
+        {
+            if (triggeringVM.ActivityScore < threshold * 4)
             {
-                Debug.WriteLine($"📢 Setting lighter brush, Score={triggeringVM.ActivityScore}");
+                Debug.WriteLine($"📢 Modifying {triggeringVM.Header}'s brush. Score={triggeringVM.ActivityScore}");
                 // Just toggle color for the most active connection
-                triggeringVM.ToggleColor = triggeringVM.ToggleColor.CreateLighterBrush(); //new SolidColorBrush(Microsoft.UI.Colors.Orchid);
+                triggeringVM.ToggleColor = triggeringVM.ToggleColor.CreateLighterBlue(); //new SolidColorBrush(Microsoft.UI.Colors.Orchid);
             }
             else
             {
-                Debug.WriteLine($"📢 Skipping lighter brush, Score={triggeringVM.ActivityScore}");
+                Debug.WriteLine($"📢 Skipping {triggeringVM.Header}'s brush change. Score={triggeringVM.ActivityScore}");
             }
         }
 
-        // Run a decay cycle
+        // Run a decay cycle on all tab models
         var list = Connections.OrderByDescending(vm => vm.ActivityScore);
         foreach (var vm in list)
         {
@@ -918,6 +988,11 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         return null;
     }
 
+    /// <summary>
+    /// Helper for stress-test. 
+    /// Used to fool the message handler into thinking we have multiple clients.
+    /// </summary>
+    /// <returns>random letter</returns>
     public string AppendRandom()
     {
         const string idChars = "abc";  // "abcdefghijklmnopqrstuvwxyz";
