@@ -362,7 +362,6 @@ public partial class App : Application
                 windowWidth = m_width,
                 windowHeight = m_height,
                 firstRun = true,
-                trackMessages = true, 
                 topmost = false,
                 logging = false,
                 transparency = false,

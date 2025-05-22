@@ -10,7 +10,8 @@ namespace IPC_Demo;
 
 public class TabItemViewModel : INotifyPropertyChanged
 {
-    static SolidColorBrush baseBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(28, 95, 178, 242)); // Microsoft.UI.Colors.DimGray
+    static SolidColorBrush baseBrush1 = new SolidColorBrush(Windows.UI.Color.FromArgb(28, 95, 178, 242));
+    static SolidColorBrush baseBrush2 = new SolidColorBrush(Microsoft.UI.Colors.White);
     public string Header { get; set; } = "New Connection";
     public string Sender { get; set; } = string.Empty;
     public IconSource Icon { get; set; } = new SymbolIconSource { Symbol = Symbol.World };
@@ -20,11 +21,22 @@ public class TabItemViewModel : INotifyPropertyChanged
     /// We need the <see cref="System.ComponentModel.INotifyPropertyChanged"/> for this to work during runtime.
     /// If you didn't wire up OnPropertyChanged(), then this would only update once during initialization.
     /// </summary>
-    private SolidColorBrush _toggleColor = baseBrush;
+    private SolidColorBrush _toggleColor = baseBrush1;
     public SolidColorBrush ToggleColor
     {
         get => _toggleColor;
         set { _toggleColor = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>
+    /// We need the <see cref="System.ComponentModel.INotifyPropertyChanged"/> for this to work during runtime.
+    /// If you didn't wire up OnPropertyChanged(), then this would only update once during initialization.
+    /// </summary>
+    private SolidColorBrush _fontColor = baseBrush2;
+    public SolidColorBrush FontColor
+    {
+        get => _fontColor;
+        set { _fontColor = value; OnPropertyChanged(); }
     }
 
     #region [Activity Tracking]
@@ -41,7 +53,8 @@ public class TabItemViewModel : INotifyPropertyChanged
         if ((DateTime.Now - LastActivity).TotalSeconds >= DecaySeconds)
         {
             ActivityScore = 0;
-            ToggleColor = baseBrush;
+            ToggleColor = baseBrush1;
+            FontColor = baseBrush2;
         }
     }
     #endregion

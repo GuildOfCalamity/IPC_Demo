@@ -27,7 +27,7 @@ public class Config
     public DateTime time;
 
     [JsonInclude]
-    [JsonPropertyName("firstrun")]
+    [JsonPropertyName("firstRun")]
     public bool firstRun = true;
 
     [JsonInclude]
@@ -48,11 +48,11 @@ public class Config
 
     [JsonInclude]
     [JsonPropertyName("windowWidth")]
-    public int windowWidth = 250;
+    public int windowWidth = 800;
 
     [JsonInclude]
     [JsonPropertyName("windowHeight")]
-    public int windowHeight = 250;
+    public int windowHeight = 600;
 
     [JsonInclude]
     [JsonPropertyName("port")]
@@ -67,16 +67,20 @@ public class Config
     public bool transparency = false;
 
     [JsonInclude]
-    [JsonPropertyName("trackmessages")]
-    public bool trackMessages = true;
+    [JsonPropertyName("trackMessages")]
+    public bool trackMessages = false;
 
     [JsonInclude]
-    [JsonPropertyName("maxmessages")]
+    [JsonPropertyName("maxMessages")]
     public int maxMessages = 50;
 
     [JsonInclude]
-    [JsonPropertyName("highlightmostactive")]
+    [JsonPropertyName("highlightMostActive")]
     public bool highlightMostActive = false;
+
+    [JsonInclude]
+    [JsonPropertyName("activityThreshold")]
+    public int activityThreshold = 3;
 
     public override string ToString() => JsonSerializer.Serialize<Config>(this, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
 }

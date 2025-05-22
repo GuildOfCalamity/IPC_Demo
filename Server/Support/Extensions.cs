@@ -4630,9 +4630,9 @@ public static class Extensions
     {
         return color.Lerp(Colors.Black, amount);
     }
-    public static Microsoft.UI.Xaml.Media.SolidColorBrush CreateDarkerBrush(this Microsoft.UI.Xaml.Media.SolidColorBrush brush)
+    public static Microsoft.UI.Xaml.Media.SolidColorBrush CreateDarkerBrush(this Microsoft.UI.Xaml.Media.SolidColorBrush brush, float amount = 0.125f)
     {
-        var darker = brush.Color.DarkerBy(0.125f);
+        var darker = brush.Color.DarkerBy(amount);
         return new Microsoft.UI.Xaml.Media.SolidColorBrush(darker);
     }
 
@@ -4646,9 +4646,9 @@ public static class Extensions
     {
         return color.Lerp(Colors.White, amount);
     }
-    public static Microsoft.UI.Xaml.Media.SolidColorBrush CreateLighterBrush(this Microsoft.UI.Xaml.Media.SolidColorBrush brush)
+    public static Microsoft.UI.Xaml.Media.SolidColorBrush CreateLighterBrush(this Microsoft.UI.Xaml.Media.SolidColorBrush brush, float amount = 0.125f)
     {
-        var lighter = brush.Color.LighterBy(0.125f);
+        var lighter = brush.Color.LighterBy(amount);
         return new Microsoft.UI.Xaml.Media.SolidColorBrush(lighter);
     }
 
@@ -4662,9 +4662,58 @@ public static class Extensions
     {
         return color.Lerp(Colors.DeepSkyBlue, amount);
     }
-    public static Microsoft.UI.Xaml.Media.SolidColorBrush CreateLighterBlue(this Microsoft.UI.Xaml.Media.SolidColorBrush brush)
+    public static Microsoft.UI.Xaml.Media.SolidColorBrush CreateLighterBlue(this Microsoft.UI.Xaml.Media.SolidColorBrush brush, float amount = 0.125f)
     {
-        var lighter = brush.Color.LighterBlue(0.1f);
+        var lighter = brush.Color.LighterBlue(amount);
+        return new Microsoft.UI.Xaml.Media.SolidColorBrush(lighter);
+    }
+
+    /// <summary>
+    /// Lightens the color by the given percentage using lerp.
+    /// </summary>
+    /// <param name="color">Source color.</param>
+    /// <param name="amount">Percentage to lighten. Value should be between 0 and 1.</param>
+    /// <returns>Color</returns>
+    public static Windows.UI.Color LighterRed(this Windows.UI.Color color, float amount)
+    {
+        //return color.Lerp(Colors.OrangeRed, amount);
+        return color.Lerp(Windows.UI.Color.FromArgb(255, 193, 51, 0), amount);
+    }
+    public static Microsoft.UI.Xaml.Media.SolidColorBrush CreateLighterRed(this Microsoft.UI.Xaml.Media.SolidColorBrush brush, float amount = 0.125f)
+    {
+        var lighter = brush.Color.LighterRed(amount);
+        return new Microsoft.UI.Xaml.Media.SolidColorBrush(lighter);
+    }
+
+    /// <summary>
+    /// Darkens the color by the given percentage using lerp.
+    /// </summary>
+    /// <param name="color">Source color.</param>
+    /// <param name="amount">Percentage to lighten. Value should be between 0 and 1.</param>
+    /// <returns>Color</returns>
+    public static Windows.UI.Color DarkerBlue(this Windows.UI.Color color, float amount)
+    {
+        return color.Lerp(Colors.MidnightBlue, amount);
+    }
+    public static Microsoft.UI.Xaml.Media.SolidColorBrush CreateDarkerBlue(this Microsoft.UI.Xaml.Media.SolidColorBrush brush, float amount = 0.125f)
+    {
+        var lighter = brush.Color.DarkerBlue(amount);
+        return new Microsoft.UI.Xaml.Media.SolidColorBrush(lighter);
+    }
+
+    /// <summary>
+    /// Darkens the color by the given percentage using lerp.
+    /// </summary>
+    /// <param name="color">Source color.</param>
+    /// <param name="amount">Percentage to lighten. Value should be between 0 and 1.</param>
+    /// <returns>Color</returns>
+    public static Windows.UI.Color DarkerRed(this Windows.UI.Color color, float amount)
+    {
+        return color.Lerp(Colors.OrangeRed, amount);
+    }
+    public static Microsoft.UI.Xaml.Media.SolidColorBrush CreateDarkerRed(this Microsoft.UI.Xaml.Media.SolidColorBrush brush, float amount = 0.125f)
+    {
+        var lighter = brush.Color.DarkerRed(amount);
         return new Microsoft.UI.Xaml.Media.SolidColorBrush(lighter);
     }
 

@@ -148,7 +148,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         }
         else
-            asset = "Bulb50_off.png";
+            asset = "Bulb58_off.png";
         
         if (_randomAsset)
             InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 61, height: 61);
@@ -438,7 +438,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                                 if (App.Profile != null && App.Profile.highlightMostActive)
                                 {
                                     existing?.RegisterActivity();
-                                    CheckForMoreActiveClientWide(existing);
+                                    CheckForMoreActiveClientWide(existing, App.Profile.activityThreshold);
                                 }
                             }
                             else
@@ -922,8 +922,10 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                 if (mostActive.ActivityScore < threshold * 4)
                 {
                     Debug.WriteLine($"📢 Modifying {mostActive.Header}'s brush. Score={mostActive.ActivityScore}");
-                    // Just toggle color for the most active connection
-                    mostActive.ToggleColor = mostActive.ToggleColor.CreateLighterBlue(); //new SolidColorBrush(Microsoft.UI.Colors.Orchid);
+                    
+                    // Adjust tab colors for the most active connection
+                    mostActive.ToggleColor = mostActive.ToggleColor.CreateLighterRed(0.1f);
+                    //mostActive.FontColor = mostActive.FontColor.CreateLighterBlue(0.1f);
                 }
                 else
                 {

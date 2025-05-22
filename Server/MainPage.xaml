@@ -76,6 +76,7 @@
                 <DataTemplate x:DataType="local:TabItemViewModel">
                     <TabViewItem
                         Background="{x:Bind ToggleColor, Mode=OneWay}"
+                        Foreground="{x:Bind FontColor, Mode=OneWay}"
                         Header="{x:Bind Header, Mode=OneWay}"
                         IconSource="{x:Bind Icon, Mode=OneWay}"
                         Loaded="TabViewItemOnLoaded">
