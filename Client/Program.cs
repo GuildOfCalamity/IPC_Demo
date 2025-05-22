@@ -22,7 +22,7 @@ public class Program
 
     static void Main(string[] args)
     {
-        int msSleep = 1500;
+        int msSleep = 1100;
         int totalCycles = 400;
 
         Console.OutputEncoding = Encoding.UTF8;
