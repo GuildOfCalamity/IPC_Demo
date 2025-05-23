@@ -45,8 +45,6 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     int _maxMessages = 50;
     readonly string _historyHeader = "Connection Activity";
     readonly ObservableCollection<ApplicationMessage>? _tab1Messages;
-    readonly ObservableCollection<ApplicationMessage>? _tab2Messages;
-    readonly ObservableCollection<ApplicationMessage>? _tab3Messages;
     public event PropertyChangedEventHandler? PropertyChanged;
     DispatcherQueueTimer? _updateGraphTimer = null;
 
@@ -262,6 +260,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         {
             if (App.Profile.trackMessages)
             {
+                // TODO: rework saving of messages for all connections
                 if (_tab1Messages != null && _tab1Messages.Count > 1)
                     App.MessageLog?.SaveData(_tab1Messages.ToList());
             }
