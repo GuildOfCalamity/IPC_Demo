@@ -154,7 +154,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             if (_realTimePlot)
             {
                 _updateGraphTimer = this.DispatcherQueue.CreateTimer();
-                _updateGraphTimer.Interval = TimeSpan.FromSeconds(5);
+                _updateGraphTimer.Interval = TimeSpan.FromSeconds(10);
                 _updateGraphTimer.Tick += UpdateGraphTimerOnTick;
                 _updateGraphTimer.Start();
             }
@@ -174,7 +174,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         }
         else
-            asset = "Bulb63_off.png";
+            asset = "Bulb59_off.png";
         
         if (_randomAsset)
             InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 61, height: 61);
@@ -631,6 +631,10 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                 default: PointSize = 22; break;
             }
             #endregion
+
+            // Trigger redraw
+            pcConnections.PointSource = null;
+            pcConnections.PointSource = Points;
         }
         catch (Exception ex)
         {

@@ -233,6 +233,7 @@
                                     </Style>
                                 </Flyout.FlyoutPresenterStyle>
                                 <ctrl:PlotControl
+                                    x:Name="pcConnections"
                                     PlotSubTitle="Hover over any item to see more details"
                                     PlotTitle="Connection activity plot"
                                     PointBorderBrush="{ThemeResource GradientPointBorderBrush}"
