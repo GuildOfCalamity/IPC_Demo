@@ -20,6 +20,7 @@
             <MenuFlyout
                 x:Name="TitlebarMenuFlyout"
                 x:FieldModifier="public"
+                Opening="TitlebarMenuFlyoutOnOpening"
                 Placement="BottomEdgeAlignedLeft">
                 <!--
                     IsEnabled="{x:Bind local:App.Profile.transparency.Equals(x:False), Mode=OneWay}"
@@ -27,7 +28,6 @@
                 <MenuFlyoutItem
                     Click="MenuFlyoutItemOnClick"
                     Tag="ActionTransparency"
-                    Text="Toggle Transparency"
                     ToolTipService.ToolTip="Requires restart">
                     <MenuFlyoutItem.Icon>
                         <FontIcon Glyph="{StaticResource ActionCenter}" />
@@ -36,7 +36,6 @@
                 <MenuFlyoutItem
                     Click="MenuFlyoutItemOnClick"
                     Tag="ActionHeatMap"
-                    Text="Toggle Most Active"
                     ToolTipService.ToolTip="Enables or disables the heat mapping">
                     <MenuFlyoutItem.Icon>
                         <FontIcon Glyph="{StaticResource World}" />
@@ -45,7 +44,6 @@
                 <MenuFlyoutItem
                     Click="MenuFlyoutItemOnClick"
                     Tag="ActionLogging"
-                    Text="Toggle Logging"
                     ToolTipService.ToolTip="Enables or disables the app-wide logger">
                     <MenuFlyoutItem.Icon>
                         <FontIcon Glyph="{StaticResource AllApps}" />
@@ -54,7 +52,6 @@
                 <MenuFlyoutItem
                     Click="MenuFlyoutItemOnClick"
                     Tag="ActionRestoreMessages"
-                    Text="Toggle Message Retention"
                     ToolTipService.ToolTip="Enables or disables the storage of previous session messages">
                     <MenuFlyoutItem.Icon>
                         <FontIcon Glyph="{StaticResource Admin}" />

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="IPC_Demo.Controls.PlotControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:IPC_Demo.Controls"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    HorizontalAlignment="Stretch"
+    VerticalAlignment="Stretch"
+    mc:Ignorable="d">
+    <Grid x:Name="host">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel
+            Grid.Row="0"
+            Margin="10"
+            HorizontalAlignment="Stretch"
+            Orientation="Vertical"
+            Spacing="5">
+
+            <local:CompShadow
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                BlurRadius="1"
+                OffsetX="1.7"
+                OffsetY="1.7"
+                ShadowOpacity="1"
+                Color="#0A1033">
+                <TextBlock
+                    x:Name="tbTitle"
+                    FontSize="{StaticResource FontSizeLarge}"
+                    Foreground="{StaticResource PrimaryBrush}"
+                    Text="Title Here"
+                    TextWrapping="Wrap" />
+            </local:CompShadow>
+
+            <TextBlock
+                x:Name="tbSubTitle"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                FontSize="{StaticResource FontSizeSmall}"
+                Foreground="{StaticResource StatusBrush}"
+                Text="SubTitle Here"
+                TextWrapping="Wrap"
+                Visibility="Collapsed" />
+
+            <!--  [divider bar]  -->
+            <Grid
+                x:Name="dividerBar"
+                Margin="0,0,0,2"
+                ColumnSpacing="0"
+                RowSpacing="0"
+                Visibility="Collapsed">
+                <Rectangle
+                    Height="2"
+                    MinWidth="50"
+                    Margin="1,2,0,0"
+                    HorizontalAlignment="Stretch"
+                    Fill="#707070"
+                    RadiusX="4"
+                    RadiusY="4" />
+                <Rectangle
+                    Height="2"
+                    MinWidth="50"
+                    Margin="0,-1,0,0"
+                    HorizontalAlignment="Stretch"
+                    Fill="#151515"
+                    RadiusX="4"
+                    RadiusY="4" />
+            </Grid>
+        </StackPanel>
+
+        <Canvas
+            x:Name="cvsPlot"
+            Grid.Row="1"
+            MinWidth="600"
+            MinHeight="350"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            Background="Transparent">
+
+            <!--  ** plots points will be drawn here **  -->
+
+            <ToolTipService.ToolTip>
+                <ToolTip
+                    x:Name="ttPlot"
+                    Background="{StaticResource GradientToolTipBrush}"
+                    BackgroundSizing="OuterBorderEdge"
+                    Placement="Mouse"
+                    Shadow="{ThemeResource CommandBarFlyoutOverflowShadow}"
+                    Translation="0,0,32"
+                    Visibility="Collapsed">
+                    <StackPanel
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="5"
+                        Orientation="Horizontal"
+                        Spacing="6">
+                        <Image
+                            Width="54"
+                            Height="54"
+                            Opacity="0.79"
+                            Source="ms-appx:///Assets/Measure2.png" />
+                        <TextBlock
+                            x:Name="ttValue"
+                            Margin="2,0,8,0"
+                            VerticalAlignment="Center"
+                            FontSize="{StaticResource FontSizeNormal}"
+                            FontWeight="Normal"
+                            Opacity="1.0"
+                            Text="N/A"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </ToolTip>
+            </ToolTipService.ToolTip>
+        </Canvas>
+    </Grid>
+
+</UserControl>

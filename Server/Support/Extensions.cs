@@ -4580,7 +4580,7 @@ public static class Extensions
     /// For the sRGB colorspace, the relative luminance of a color is defined as L = 0.2126 * R + 0.7152 * G + 0.0722 * B
     /// </summary>
     /// <param name="c"><see cref="Windows.UI.Color"/></param>
-    /// <remarks>This is mainly used by <see cref="Helpers.CalculateContrastRatio(Color, Color)"/></remarks>
+    /// <remarks>This is mainly used by <see cref="Extensions.CalculateContrastRatio(Windows.UI.Color, Windows.UI.Color)"/></remarks>
     public static double GetRelativeLuminance(Windows.UI.Color c)
     {
         double rSRGB = c.R / 255.0;
@@ -4593,6 +4593,119 @@ public static class Extensions
         double g = gSRGB <= 0.04045 ? gSRGB / 12.92 : Math.Pow(((gSRGB + 0.055) / 1.055), 2.4);
         double b = bSRGB <= 0.04045 ? bSRGB / 12.92 : Math.Pow(((bSRGB + 0.055) / 1.055), 2.4);
         return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    /// <summary>
+    /// Reverses a given <see cref="Microsoft.UI.Xaml.Media.SolidColorBrush"/> to a contrasting black or white brush.
+    /// </summary>
+    public static Microsoft.UI.Xaml.Media.SolidColorBrush GetContrastingBlackOrWhiteBrush(Microsoft.UI.Xaml.Media.SolidColorBrush input)
+    {
+        if (input == null)
+            throw new ArgumentNullException(nameof(input), "Input brush cannot be null.");
+
+        // Use standard luminance formula for perceptual brightness
+        double luminance = (0.299 * input.Color.R + 0.587 * input.Color.G + 0.114 * input.Color.B) / 255;
+
+        // Flip: dark → light, light → dark
+        return luminance > 0.5 ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Black) : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.White);
+    }
+
+    /// <summary>
+    /// Attempts to create a contrasting <see cref="Microsoft.UI.Xaml.Media.SolidColorBrush"/> based on the input color.
+    /// </summary>
+    public static SolidColorBrush CreateContrastingBrush(this SolidColorBrush input, double contrastFactor = 0.4)
+    {
+        if (input == null)
+            throw new ArgumentNullException(nameof(input), "Input brush cannot be null.");
+
+        // Convert the color to HSL for use in contrast calculation
+        RgbToHsl(input.Color, out double h, out double s, out double l);
+
+        // Adjust contrast by pushing lightness away from mid-point (0.5)
+        if (l >= 0.5)
+            l = Math.Max(0.0, l - contrastFactor);
+        else
+            l = Math.Min(1.0, l + contrastFactor);
+
+        var contrastedColor = HslToRgb(h, s, l);
+
+        return new SolidColorBrush(contrastedColor);
+    }
+
+    /// <summary>
+    /// Converts RGB (red, green, blue) to HSL (hue, saturation, and lightness).
+    /// HSL is also known as HSB (hue, saturation, and brightness) or HSV (hue, saturation, and value).
+    /// </summary>
+    /// <remarks>
+    /// HSL and HSV are the two most common cylindrical-coordinate representations of points in an RGB color model.
+    /// Neither additive nor subtractive color models define color relationships the same way the human eye does.
+    /// https://en.wikipedia.org/wiki/HSL_and_HSV
+    /// </remarks>
+    public static void RgbToHsl(Windows.UI.Color color, out double h, out double s, out double l)
+    {
+        double r = color.R / 255.0;
+        double g = color.G / 255.0;
+        double b = color.B / 255.0;
+
+        double max = Math.Max(r, Math.Max(g, b));
+        double min = Math.Min(r, Math.Min(g, b));
+
+        h = s = l = (max + min) / 2.0;
+
+        if (max == min)
+            h = s = 0; // achromatic
+        else
+        {
+            double d = max - min;
+            s = l > 0.5 ? d / (2.0 - max - min) : d / (max + min);
+            
+            if (max == r) 
+                h = (g - b) / d + (g < b ? 6 : 0);
+            else if (max == g) 
+                h = (b - r) / d + 2;
+            else if (max == b) 
+                h = (r - g) / d + 4;
+
+            h /= 6;
+        }
+    }
+
+    /// <summary>
+    /// Converts HSL (hue, saturation, and lightness) to RGB (red, green, blue).
+    /// HSL is also known as HSB (hue, saturation, and brightness) or HSV (hue, saturation, and value).
+    /// </summary>
+    /// <remarks>
+    /// HSL and HSV are the two most common cylindrical-coordinate representations of points in an RGB color model.
+    /// Neither additive nor subtractive color models define color relationships the same way the human eye does.
+    /// https://en.wikipedia.org/wiki/HSL_and_HSV
+    /// </remarks>
+    public static Windows.UI.Color HslToRgb(double h, double s, double l)
+    {
+        double r, g, b;
+
+        if (s == 0)
+            r = g = b = l; // achromatic
+        else
+        {
+            Func<double, double, double, double> hue2rgb = (p, q, t) =>
+            {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1.0 / 6) return p + (q - p) * 6 * t;
+                if (t < 1.0 / 2) return q;
+                if (t < 2.0 / 3) return p + (q - p) * (2.0 / 3 - t) * 6;
+                return p;
+            };
+            
+            double q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            double p = 2 * l - q;
+
+            r = hue2rgb(p, q, h + 1.0 / 3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1.0 / 3);
+        }
+
+        return Windows.UI.Color.FromArgb(255, (byte)(r * 255), (byte)(g * 255), (byte)(b * 255));
     }
 
     /// <summary>
@@ -5697,6 +5810,33 @@ public static class Extensions
             }
         }
         return false;
+    }
+
+    /// <summary>
+    /// Walks through all <see cref="Microsoft.UI.Xaml.Controls.MenuFlyoutItem"/> controls within a <see cref="Microsoft.UI.Xaml.Controls.MenuFlyout"/>.
+    /// </summary>
+    /// <param name="menuFlyout">The <see cref="Microsoft.UI.Xaml.Controls.MenuFlyout"/> to traverse</param>
+    /// <returns>An IEnumerable of <see cref="Microsoft.UI.Xaml.Controls.MenuFlyoutItem"/> controls found within the <see cref="Microsoft.UI.Xaml.Controls.MenuFlyout"/></returns>
+    public static IEnumerable<MenuFlyoutItem> GetFlyoutItems(this MenuFlyout? menuFlyout)
+    {
+        if (menuFlyout == null)
+            yield break;
+
+        foreach (var item in menuFlyout.Items)
+        {
+            if (item is MenuFlyoutItem menuItem)
+            {
+                yield return menuItem;
+            }
+            else if (item is MenuFlyoutSubItem subItem)
+            {
+                // Recursively traverse sub-items (not tested)
+                foreach (var subMenuItem in GetFlyoutItems(subItem.Items.OfType<MenuFlyoutItem>()?.FirstOrDefault()?.Parent as MenuFlyout))
+                {
+                    yield return subMenuItem;
+                }
+            }
+        }
     }
 
     /// <summary>

@@ -41,13 +41,15 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     bool _toggle = false;
     bool _randomAsset = false;
     bool _stressTest = true;
+    bool _realTimePlot = true;
     int _maxMessages = 50;
     readonly string _historyHeader = "Connection Activity";
     readonly ObservableCollection<ApplicationMessage>? _tab1Messages;
     readonly ObservableCollection<ApplicationMessage>? _tab2Messages;
     readonly ObservableCollection<ApplicationMessage>? _tab3Messages;
     public event PropertyChangedEventHandler? PropertyChanged;
-    
+    DispatcherQueueTimer? _updateGraphTimer = null;
+
     static Shared.ValueStopwatch _vsw = Shared.ValueStopwatch.StartNew();
     public ObservableCollection<TabItemViewModel> Connections { get; set; } = new();
 
@@ -64,6 +66,22 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         get => _footerText;
         set { _footerText = value; NotifyPropertyChanged(nameof(FooterText)); }
     }
+
+    #region [Plot Control]
+    List<GraphItem> _points = new();
+    public List<GraphItem> Points
+    {
+        get => _points;
+        set { _points = value; NotifyPropertyChanged(nameof(Points)); }
+    }
+
+    double _pointSize = 12;
+    public double PointSize
+    {
+        get => _pointSize;
+        set { _pointSize = value; NotifyPropertyChanged(nameof(PointSize)); }
+    }
+    #endregion
 
     public void NotifyPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = "")
     {
@@ -132,6 +150,14 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             ipcServer.ErrorOccurred += IpcServer_ErrorOccurred;
             ipcServer.Start();
             #endregion
+
+            if (_realTimePlot)
+            {
+                _updateGraphTimer = this.DispatcherQueue.CreateTimer();
+                _updateGraphTimer.Interval = TimeSpan.FromSeconds(5);
+                _updateGraphTimer.Tick += UpdateGraphTimerOnTick;
+                _updateGraphTimer.Start();
+            }
         }
 
         var workingCode = Shared.SecurityHelper.GenerateSecureCode6(_secret);
@@ -148,12 +174,12 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         }
         else
-            asset = "Bulb58_off.png";
+            asset = "Bulb63_off.png";
         
         if (_randomAsset)
             InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 61, height: 61);
         else
-            InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 131, height: 131);
+            InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 151, height: 151);
 
         UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}    📷 {asset.Substring(0, asset.IndexOf("_"))}", MessageLevel.Information);
         #endregion
@@ -230,6 +256,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     void IpcPageOnUnloaded(object sender, RoutedEventArgs e)
     {
         ipcServer?.Stop();
+        _updateGraphTimer?.Stop();
+
         if (App.Profile != null)
         {
             if (App.Profile.trackMessages)
@@ -454,20 +482,29 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
                     SetVisualChild(layer2, _visualErr); // We're using the Compositor to swap the image, instead of the Image.Visibility trick.
 
-                    //this.DispatcherQueue.TryEnqueue(() =>
-                    //{
-                    //    /** Tab for failed security check **/
-                    //
-                    //    var appMsg = new ApplicationMessage
-                    //    {
-                    //        Module = ModuleId.IPC_Failed,
-                    //        MessagePayload = jmsg,
-                    //        MessageText = $"{jmsg}",
-                    //        MessageType = typeof(Shared.IpcMessage),
-                    //        MessageTime = jmsg.Time.ParseJsonDateTime(),
-                    //    };
-                    //    _tabFails?.Insert(0, appMsg);
-                    //});
+                    this.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        /** 
+                         **  You'll want to add some form of protection to prevent intentional/malicious hammering.
+                         **/
+
+                        var tvm = Connections.FirstOrDefault(Connections => Connections.Header.Equals(_historyHeader, StringComparison.OrdinalIgnoreCase));
+                        if (tvm != null)
+                        {
+                            var conMsg = new ApplicationMessage
+                            {
+                                Module = ModuleId.IPC_Failed,
+                                MessagePayload = $"{jmsg}",
+                                MessageText = $"💻 {jmsg.Sender}    ⌚ {jmsg.Time}",
+                                MessageType = typeof(Shared.IpcMessage),
+                                MessageTime = DateTime.Now,
+                            };
+                            tvm?.Messages?.Insert(0, conMsg);
+                            if (tvm?.Messages?.Count > _maxMessages)
+                                tvm?.Messages?.RemoveAt(_maxMessages);
+                        }
+
+                    });
                 }
             }
             else
@@ -525,6 +562,82 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         }
     }
+
+    /// <summary>
+    /// <see cref="Flyout"/> opened event for graphing.
+    /// Data will be populated when the flyout is opened.
+    /// </summary>
+    /// <remarks>
+    /// For a typical random distribution, the connections on the graph should all eventually 
+    /// equal <see cref="MainPage._maxMessages"/>, if the simulation is allowed to run long enough.
+    /// </remarks>
+    public void GraphFlyoutOpened(object sender, object e)
+    {
+        if (_realTimePlot)
+            return;
+
+        UpdatePlotPoints();
+    }
+
+    void UpdateGraphTimerOnTick(DispatcherQueueTimer sender, object args)
+    {
+        if (App.IsClosing)
+            return;
+
+        UpdatePlotPoints();
+    }
+
+    void UpdatePlotPoints()
+    {
+        try
+        {
+            Points.Clear();
+
+            int groupCount = 0;
+
+            // Select connections with at least one message and then order by header.
+            var orderedList = Connections
+                .Where(e => e.Messages.Count > 0)
+                .OrderBy(e => e.Header)
+                .ToList();
+
+            foreach (var item in orderedList)
+            {
+                if (string.IsNullOrEmpty(item.Header) || item.Header.Contains(_historyHeader))
+                    continue;
+
+                groupCount++;
+
+                //foreach (var msg in item.Messages)
+                //{
+                //    if (msg.MessageTime.IsOlderThanDays(2d))
+                //        continue;
+                //}
+
+                //Points.Add(new GraphItem { Title = item.Header, Amount = item.ActivityScore });
+                Points.Add(new GraphItem { Title = item.Header, Score = item.ActivityScore, Amount = item.Messages.Count });
+            }
+
+            #region [Point size auto-adjust]
+            switch (Points.Count)
+            {
+                case int count when count > 100: PointSize = 3; break;
+                case int count when count > 75: PointSize = 4; break;
+                case int count when count > 50: PointSize = 6; break;
+                case int count when count > 25: PointSize = 8; break;
+                case int count when count > 15: PointSize = 10; break;
+                case int count when count > 10: PointSize = 15; break;
+                case int count when count > 5: PointSize = 18; break;
+                default: PointSize = 22; break;
+            }
+            #endregion
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ERROR] Failed to update graph points: {ex.Message}");
+        }
+    }
+
     #endregion
 
     #region [Image toggle using Compositor]
@@ -561,8 +674,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
             else
             {
-                layer1.Margin = new Thickness(0, -1 * (width * 0.3), width + (width * 1.5), 0);
-                layer2.Margin = new Thickness(0, -1 * (width * 0.3), width + (width * 1.5), 0);
+                layer1.Margin = new Thickness(0, -1 * (width * 0.3), width + (width * 1.2), 0);
+                layer2.Margin = new Thickness(0, -1 * (width * 0.3), width + (width * 1.2), 0);
             }
         });
     }
@@ -922,10 +1035,11 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                 if (mostActive.ActivityScore < threshold * 4)
                 {
                     Debug.WriteLine($"📢 Modifying {mostActive.Header}'s brush. Score={mostActive.ActivityScore}");
-                    
-                    // Adjust tab colors for the most active connection
+                    #region [Adjusting colors for most active]
                     mostActive.ToggleColor = mostActive.ToggleColor.CreateLighterRed(0.1f);
                     //mostActive.FontColor = mostActive.FontColor.CreateLighterBlue(0.1f);
+                    //mostActive.FontColor = mostActive.ToggleColor.CreateContrastingBrush(0.3f);
+                    #endregion
                 }
                 else
                 {
@@ -997,7 +1111,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// <returns>random letter</returns>
     public string AppendRandom()
     {
-        const string idChars = "abc";  // "abcdefghijklmnopqrstuvwxyz";
+        const string idChars = "abcdefghi"; // "abcdefghijklmnopqrstuvwxyz";
         char[] charArray = idChars.Distinct().ToArray();
         return $"{charArray[Random.Shared.Next() % charArray.Length]}";
     }

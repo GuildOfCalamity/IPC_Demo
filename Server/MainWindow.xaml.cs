@@ -17,6 +17,7 @@ using Windows.ApplicationModel.Activation;
 using Windows.Graphics;
 
 using WinRT.Interop;
+using Windows.UI.Composition;
 
 namespace IPC_Demo;
 
@@ -154,13 +155,11 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         App.Profile.firstRun = false;
         ConfigHelper.SaveConfig(App.Profile);
     }
-    #endregion
 
     void MinimizeOnClicked(object sender, RoutedEventArgs args) => _overlapPresenter?.Minimize();
-
     void MaximizeOnClicked(object sender, RoutedEventArgs args) => _overlapPresenter?.Maximize();
-
     void CloseOnClicked(object sender, RoutedEventArgs args) => this.Close(); // -or- (Application.Current as App)?.Exit();
+    #endregion
 
     /// <summary>
     /// Communal event for <see cref="MenuFlyoutItem"/> clicks.
@@ -245,6 +244,51 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
             Debug.WriteLine($"[WARNING] Tag data is empty for this MenuFlyoutItem.");
         }
     }
+
+    /// <summary>
+    /// This event is used to update the text of the <see cref="MenuFlyoutItem"/>s when the flyout is opened.
+    /// </summary>
+    void TitlebarMenuFlyoutOnOpening(object sender, object e)
+    {
+        if (App.Profile == null)
+            return;
+
+        if (sender is Microsoft.UI.Xaml.Controls.MenuFlyout mf)
+        {
+            mf.GetFlyoutItems().ForEach(x =>
+            {
+                if (x is MenuFlyoutItem mfi && mfi is not null)
+                {
+                    if (mfi.Tag is not null && $"{mfi.Tag}".Equals("ActionTransparency", StringComparison.OrdinalIgnoreCase))
+                    {
+                        mfi.Text = App.Profile.transparency ? "Disable Transparency" : "Enable Transparency";
+                        mfi.Foreground = App.Profile.transparency ? menuBrush2 : menuBrush1;
+                    }
+                    else if (mfi.Tag is not null && $"{mfi.Tag}".Equals("ActionHeatMap", StringComparison.OrdinalIgnoreCase))
+                    {
+                        mfi.Text = App.Profile.highlightMostActive ? "Disable Heat Map" : "Enable Heat Map";
+                        mfi.Foreground = App.Profile.highlightMostActive ? menuBrush2 : menuBrush1;
+                    }
+                    else if (mfi.Tag is not null && $"{mfi.Tag}".Equals("ActionLogging", StringComparison.OrdinalIgnoreCase))
+                    {
+                        mfi.Text = App.Profile.logging ? "Disable Logging" : "Enable Logging";
+                        mfi.Foreground = App.Profile.logging ? menuBrush2 : menuBrush1;
+                    }
+                    else if (mfi.Tag is not null && $"{mfi.Tag}".Equals("ActionRestoreMessages", StringComparison.OrdinalIgnoreCase))
+                    {
+                        mfi.Text = App.Profile.trackMessages ? "Disable Message Tracking" : "Enable Message Tracking";
+                        mfi.Foreground = App.Profile.trackMessages ? menuBrush2 : menuBrush1;
+                    }
+                }
+            });
+        }
+        else
+        {
+            Debug.WriteLine($"[WARNING] Sender was not of type {nameof(MenuFlyout)}.");
+        }
+    }
+    SolidColorBrush menuBrush1 = new SolidColorBrush(Microsoft.UI.Colors.White);
+    SolidColorBrush menuBrush2 = new SolidColorBrush(Microsoft.UI.Colors.SkyBlue);
 
     #region [Helpers]
     void CreateGradientBackdrop(FrameworkElement fe, System.Numerics.Vector2 endPoint)

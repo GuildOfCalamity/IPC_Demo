@@ -187,11 +187,66 @@
             </TabView.TabStripHeader>
             <TabView.TabStripFooter>
                 <Grid MinWidth="200" Background="Transparent">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
                     <TextBlock
+                        Grid.Column="0"
                         Margin="10,7,0,0"
                         VerticalAlignment="Center"
                         FontSize="{StaticResource FontSizeSmall}"
                         Text="{x:Bind FooterText, Mode=OneWay}" />
+                    <AppBarButton
+                        Grid.Column="1"
+                        Height="54"
+                        HorizontalAlignment="Right"
+                        VerticalContentAlignment="Top"
+                        CornerRadius="4"
+                        ToolTipService.ToolTip="Graph all">
+                        <AppBarButton.Icon>
+                            <FontIcon Glyph="{StaticResource AreaChart}" />
+                        </AppBarButton.Icon>
+                        <!--<AppBarButton.Content>
+                        <Grid>
+                            <PathIcon Data="{StaticResource PathIcons.PlotLayer1}" Foreground="WhiteSmoke" />
+                            <PathIcon Data="{StaticResource PathIcons.PlotLayer2}" Foreground="DimGray" />
+                        </Grid>
+                        </AppBarButton.Content>-->
+                        <AppBarButton.Flyout>
+                            <Flyout
+                                AreOpenCloseAnimationsEnabled="True"
+                                LightDismissOverlayMode="Off"
+                                Opened="{x:Bind GraphFlyoutOpened, Mode=OneWay}"
+                                Placement="Full">
+                                <Flyout.FlyoutPresenterStyle>
+                                    <Style TargetType="FlyoutPresenter">
+                                        <Setter Property="CornerRadius" Value="6" />
+                                        <Setter Property="MinWidth" Value="800" />
+                                        <Setter Property="Background" Value="{ThemeResource RevealAcrylicBrush}" />
+                                        <Setter Property="ScrollViewer.VerticalScrollMode" Value="Auto" />
+                                        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+                                        <Setter Property="ScrollViewer.HorizontalScrollMode" Value="Auto" />
+                                        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+                                        <Setter Property="IsTabStop" Value="True" />
+                                        <Setter Property="TabNavigation" Value="Cycle" />
+                                    </Style>
+                                </Flyout.FlyoutPresenterStyle>
+                                <ctrl:PlotControl
+                                    PlotSubTitle="Hover over any item to see more details"
+                                    PlotTitle="Connection activity plot"
+                                    PointBorderBrush="{ThemeResource GradientPointBorderBrush}"
+                                    PointBrush="{ThemeResource GradientPointBrush}"
+                                    PointCanvasMargin="86"
+                                    PointDelayMS="32"
+                                    PointGround="True"
+                                    PointRadius="{x:Bind PointSize, Mode=OneWay, FallbackValue=4}"
+                                    PointSource="{x:Bind Points, Mode=OneWay}"
+                                    PointStrokeThickness="2"
+                                    ShowTitleDivider="False" />
+                            </Flyout>
+                        </AppBarButton.Flyout>
+                    </AppBarButton>
                 </Grid>
             </TabView.TabStripFooter>
         </TabView>
