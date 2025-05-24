@@ -14,6 +14,16 @@ public class Program
     static int Port { get; set; } = 32000;
 
     /// <summary>
+    /// The sender's name.
+    /// </summary>
+    static string Sender { get; set; } = Environment.MachineName;
+
+    /// <summary>
+    /// Stress test flag.
+    /// </summary>
+    static bool StressTest { get; set; } = false;
+
+    /// <summary>
     /// Server and client must share this secret.
     /// Don't hard-code this as I have, this is just an example demo.
     /// </summary>
@@ -22,11 +32,12 @@ public class Program
 
     static void Main(string[] args)
     {
-        int msSleep = 1100;
-        int totalCycles = 400;
+        int msSleep = 990;
+        int totalCycles = 500;
 
         Console.OutputEncoding = Encoding.UTF8;
 
+        #region [Argument checks]
         // Check if we were passed a port option
         if (args.Length > 0)
         {
@@ -36,10 +47,32 @@ public class Program
                 Port = portOption;
             }
             else
-            {
                 Console.WriteLine($"⚠️ Invalid port option '{args[0]}', using default port {Port}");
-            }
         }
+
+        // Check if we were passed a sender option
+        if (args.Length > 1)
+        {
+            if (!string.IsNullOrEmpty(args[1]))
+            {
+                Console.WriteLine($"🔔 Sender set to '{args[1]}'");
+                Sender = args[1];
+            }
+            else
+                Console.WriteLine($"⚠️ Invalid sender option '{args[1]}', using default sender");
+        }
+
+        // Check if we were passed a stress test option
+        if (args.Length > 2)
+        {
+            Console.WriteLine($"🔔 Stress test is enabled");
+            StressTest = true;
+        }
+        else
+        {
+            Console.WriteLine($"🔔 Stress test is disabled");
+        }
+        #endregion
 
         Console.WriteLine($"🔔 Starting {ToReadableTime(totalCycles * msSleep)} IPC test…");
         Thread.Sleep(2500);
@@ -49,8 +82,16 @@ public class Program
         {
             if (_ipc != null)
             {
-                Console.WriteLine($"📨 Sending IPC data #{ipc} to listener at {DateTime.Now.ToLongTimeString()}");
-                _ipc.SendMessage("data", Shared.Data.GenerateTechnicalGibberish(Random.Shared.Next(5,16)), Secret);
+                // For stress-testing purposes we can append a random char to the header so
+                // it appears like more than one application is connecting to our server.
+                string name = string.Empty;
+                if (StressTest)
+                    name = $"{Sender}{AppendRandom()}";
+                else
+                    name = $"{Sender}";
+
+                Console.WriteLine($"📨 Sending IPC data #{ipc} from '{name}' to listener at {DateTime.Now.ToLongTimeString()}");
+                _ipc.SendMessage("data", Shared.Data.GenerateTechnicalGibberish(Random.Shared.Next(5,16)), Secret, $"{name}");
             }
             else
             {
@@ -95,5 +136,17 @@ public class Program
                 timeSpan.Seconds, timeSpan.Seconds == 1 ? "" : "s",
                 timeSpan.Milliseconds, timeSpan.Milliseconds == 1 ? "" : "s");
         }
+    }
+
+    /// <summary>
+    /// Helper for stress-test. 
+    /// Used to fool the message handler into thinking we have multiple clients.
+    /// </summary>
+    /// <returns>random letter</returns>
+    static string AppendRandom()
+    {
+        const string idChars = "abcdefghijklmnopqrstuvwxyz";
+        char[] charArray = idChars.Distinct().ToArray();
+        return $"{charArray[Random.Shared.Next() % charArray.Length]}";
     }
 }

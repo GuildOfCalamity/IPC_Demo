@@ -29,15 +29,17 @@ public class IpcClient
     /// <param name="type">the type of message</param>
     /// <param name="payload">the data to send</param>
     /// <param name="secret">the shared security key</param>
-    public async void SendMessage(string type, string payload, string secret)
+    /// <param name="sender">if empty the local machine name is used</param>
+    public async void SendMessage(string type, string payload, string secret, string sender)
     {
         string json = JsonSerializer.Serialize(new Shared.IpcMessage
         {
             Type = type ?? string.Empty,
             Payload = payload ?? string.Empty,
             Secret = Shared.SecurityHelper.GenerateSecureCode6(secret),
+            Sender = string.IsNullOrEmpty(sender) ? Environment.MachineName : sender,
             //Time = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ") // JSON date-time format
-            //Time = DateTime.UtcNow.ToString("o") // ISO 8601 format
+            //Time = DateTime.UtcNow.ToString("o")                 // ISO 8601 format
         });
 
         using (var client = new TcpClient())
@@ -46,6 +48,7 @@ public class IpcClient
             {
                 _vsw = Shared.ValueStopwatch.StartNew();
 
+                // Connect to the server and write the message into the network stream.
                 await client.ConnectAsync(Host, Port);
                 using var writer = new StreamWriter(client.GetStream()) { AutoFlush = true };
                 await writer.WriteLineAsync(json);
@@ -58,6 +61,7 @@ public class IpcClient
                 if (++SocketErrors > 3)
                 {
                     Console.WriteLine($"{Environment.NewLine}🚨 Socket errors exceeded limit - Exiting 🚨{Environment.NewLine}");
+                    Thread.Sleep(2000);
                     Environment.Exit(1);
                 }
             }
@@ -67,6 +71,7 @@ public class IpcClient
                 if (++IOErrors > 3)
                 {
                     Console.WriteLine($"{Environment.NewLine}🚨 I/O errors exceeded limit - Exiting 🚨{Environment.NewLine}");
+                    Thread.Sleep(2000);
                     Environment.Exit(1);
                 }
             }
