@@ -40,8 +40,10 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     bool _loaded = false;
     bool _toggle = false;
     bool _randomAsset = false;
-    bool _stressTest = true;
     bool _realTimePlot = true;
+    bool _localMachineOnly = false;
+    bool _silentRejection = false;
+    bool _redrawNeeded = true;
     int _maxMessages = 50;
     readonly string _historyHeader = "Connection Activity";
     readonly ObservableCollection<ApplicationMessage>? _tab1Messages;
@@ -172,12 +174,12 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         }
         else
-            asset = "Bulb59_off.png";
+            asset = "Bulb54_off.png";
         
         if (_randomAsset)
             InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 61, height: 61);
         else
-            InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 151, height: 151);
+            InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 161, height: 161);
 
         UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}    📷 {asset.Substring(0, asset.IndexOf("_"))}", MessageLevel.Information);
         #endregion
@@ -330,6 +332,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         if (obj == null)
             return;
 
+        _redrawNeeded = true;
         this.DispatcherQueue.TryEnqueue(() =>
         {
             #region [Connection History]
@@ -380,8 +383,14 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     {
         if (_loaded && jmsg != null)
         {
-            // Check if it's a message from us by us.
-            if (!string.IsNullOrEmpty(jmsg.Sender) && jmsg.Sender == Environment.MachineName)
+            string senderCompare = string.Empty;
+            if (_localMachineOnly)
+                senderCompare = Environment.MachineName;
+            else
+                senderCompare = jmsg.Sender;
+
+            // Check if it's a message from us by us (uncomment the MachineName check to enable two-factor)
+            if (!string.IsNullOrEmpty(jmsg.Sender) /* && jmsg.Sender == Environment.MachineName */)
             {
                 #region [LED toggle]
                 if (_toggle)
@@ -418,22 +427,15 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
                     this.DispatcherQueue.TryEnqueue(() =>
                     {
-                        // For stress-testing purposes we can append a random char to the header so
-                        // it appears like more than one application is connecting to our server.
-                        string test = string.Empty;
-                        if (_stressTest)
-                            test = AppendRandom();
-
                         // Does the connection already exist?
-                        if (!Connections.Any(Connections =>
-                            Connections.Header.Equals(Environment.MachineName + test, StringComparison.OrdinalIgnoreCase)))
+                        if (!Connections.Any(Connections => Connections.Header.Equals(senderCompare, StringComparison.OrdinalIgnoreCase)))
                         {
-                            UpdateInfoBar($"Creating new tab for '{jmsg.Sender}{test}'", MessageLevel.Important);
+                            UpdateInfoBar($"Creating new tab for '{senderCompare}'", MessageLevel.Important);
                             var tvm = new TabItemViewModel
                             {
-                                Header = $"{Environment.MachineName}{test}",
+                                Header = $"{senderCompare}",
                                 Sender = jmsg.Sender,
-                                DecaySeconds = _stressTest ? 7 : 30,
+                                DecaySeconds = 15, // you'll want to adjust this for stress test scenarios
                                 Icon = SymbolIconHelper.GetRandomIcon(),
                             };
                             Connections.Add(tvm);
@@ -446,15 +448,13 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                             // Update the footer (subtract one for history tab)
                             FooterText = $"Connections: {Connections.Count - 1}";
 
-                           /**
-                            **  TODO: Check for old connections and remove them, or too many tabs being created.
-                            **/
+                            /**
+                             **  TODO: Check for old connections and remove them, or too many tabs being created.
+                             **/
                         }
                         else
                         {
-                            var existing = Connections.FirstOrDefault(Connections =>
-                                Connections.Header.Equals(Environment.MachineName + test, StringComparison.OrdinalIgnoreCase));
-
+                            var existing = Connections.FirstOrDefault(Connections => Connections.Header.Equals(senderCompare, StringComparison.OrdinalIgnoreCase));
                             if (existing != null)
                             {
                                 existing?.Messages?.Insert(0, appMsg);
@@ -473,8 +473,11 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                         }
                     });
                 }
-                else // failed security check
+                else if (!_silentRejection) // failed security check
                 {
+                    /** 
+                     **  You'll want to add some form of protection to prevent intentional/malicious hammering.
+                     **/
                     UpdateInfoBar($"⚠️ Failed security check for sender '{jmsg.Sender}'", MessageLevel.Error);
                     if (App.Profile != null && App.Profile.logging)
                         Shared.Logger.Log($"Failed security check for sender '{jmsg.Sender}'", "Security");
@@ -483,10 +486,6 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
                     this.DispatcherQueue.TryEnqueue(() =>
                     {
-                        /** 
-                         **  You'll want to add some form of protection to prevent intentional/malicious hammering.
-                         **/
-
                         var tvm = Connections.FirstOrDefault(Connections => Connections.Header.Equals(_historyHeader, StringComparison.OrdinalIgnoreCase));
                         if (tvm != null)
                         {
@@ -502,7 +501,6 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                             if (tvm?.Messages?.Count > _maxMessages)
                                 tvm?.Messages?.RemoveAt(_maxMessages);
                         }
-
                     });
                 }
             }
@@ -572,7 +570,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// </remarks>
     public void GraphFlyoutOpened(object sender, object e)
     {
-        if (_realTimePlot)
+        if (!_redrawNeeded || App.IsClosing)
             return;
 
         UpdatePlotPoints();
@@ -580,7 +578,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
     void UpdateGraphTimerOnTick(DispatcherQueueTimer sender, object args)
     {
-        if (App.IsClosing)
+        if (!_redrawNeeded || App.IsClosing)
             return;
 
         UpdatePlotPoints();
@@ -590,6 +588,11 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     {
         try
         {
+            _redrawNeeded = false;
+
+            if (Connections.Count == 0)
+                return;
+
             Points.Clear();
 
             int groupCount = 0;
@@ -1105,18 +1108,6 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             return tvm2;
 
         return null;
-    }
-
-    /// <summary>
-    /// Helper for stress-test. 
-    /// Used to fool the message handler into thinking we have multiple clients.
-    /// </summary>
-    /// <returns>random letter</returns>
-    public string AppendRandom()
-    {
-        const string idChars = "abcdefghi"; // "abcdefghijklmnopqrstuvwxyz";
-        char[] charArray = idChars.Distinct().ToArray();
-        return $"{charArray[Random.Shared.Next() % charArray.Length]}";
     }
 
     void UpdateInfoBar(string msg, MessageLevel level = MessageLevel.Information)
