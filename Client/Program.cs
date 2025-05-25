@@ -24,6 +24,11 @@ public class Program
     static bool StressTest { get; set; } = false;
 
     /// <summary>
+    /// For simulating faulty security PIN.
+    /// </summary>
+    static bool RandomFaultyPIN { get; set; } = false;
+
+    /// <summary>
     /// Server and client must share this secret.
     /// Don't hard-code this as I have, this is just an example demo.
     /// </summary>
@@ -72,6 +77,17 @@ public class Program
         {
             Console.WriteLine($"🔔 Stress test is disabled");
         }
+
+        // Check if we were passed a faulty PIN test option
+        if (args.Length > 3)
+        {
+            Console.WriteLine($"🔔 Faulty PIN test is enabled");
+            RandomFaultyPIN = true;
+        }
+        else
+        {
+            Console.WriteLine($"🔔 Faulty PIN test is disabled");
+        }
         #endregion
 
         Console.WriteLine($"🔔 Starting {ToReadableTime(totalCycles * msSleep)} IPC test…");
@@ -90,8 +106,16 @@ public class Program
                 else
                     name = $"{Sender}";
 
-                Console.WriteLine($"📨 Sending IPC data #{ipc} from '{name}' to listener at {DateTime.Now.ToLongTimeString()}");
-                _ipc.SendMessage("data", Shared.Data.GenerateTechnicalGibberish(Random.Shared.Next(5,16)), Secret, $"{name}");
+                if (RandomFaultyPIN && ipc > 10 && Random.Shared.Next(21) >= 15) // ~25% chance of PIN fail
+                {
+                    Console.WriteLine($"📨 Sending IPC data #{ipc} with faulty PIN from '{name}' to listener at {DateTime.Now.ToLongTimeString()}");
+                    _ipc.SendMessage("data", Shared.Data.GenerateTechnicalGibberish(Random.Shared.Next(5, 16)), $"{Secret}{AppendRandom()}", $"{name}");
+                }
+                else
+                {
+                    Console.WriteLine($"📨 Sending IPC data #{ipc} from '{name}' to listener at {DateTime.Now.ToLongTimeString()}");
+                    _ipc.SendMessage("data", Shared.Data.GenerateTechnicalGibberish(Random.Shared.Next(5, 16)), Secret, $"{name}");
+                }
             }
             else
             {
