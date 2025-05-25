@@ -42,7 +42,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     bool _randomAsset = false;
     bool _realTimePlot = true;
     bool _localMachineOnly = false;
-    bool _silentRejection = false;
+    bool _verboseRejection = true;
     bool _redrawNeeded = true;
     int _maxMessages = 50;
     readonly string _historyHeader = "Connection Activity";
@@ -473,19 +473,19 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                         }
                     });
                 }
-                else if (!_silentRejection) // failed security check
+                else if (_verboseRejection) // failed security check
                 {
                     /** 
                      **  You'll want to add some form of protection to prevent intentional/malicious hammering.
                      **/
-                    UpdateInfoBar($"⚠️ Failed security check for sender '{jmsg.Sender}'", MessageLevel.Error);
                     if (App.Profile != null && App.Profile.logging)
                         Shared.Logger.Log($"Failed security check for sender '{jmsg.Sender}'", "Security");
 
-                    SetVisualChild(layer2, _visualErr); // We're using the Compositor to swap the image, instead of the Image.Visibility trick.
-
+                    // Add to our connection history tab (we may want to create a rejects tab in the future)
                     this.DispatcherQueue.TryEnqueue(() =>
                     {
+                        UpdateInfoBar($"⚠️ Failed security check for sender '{jmsg.Sender}'", MessageLevel.Error);
+
                         var tvm = Connections.FirstOrDefault(Connections => Connections.Header.Equals(_historyHeader, StringComparison.OrdinalIgnoreCase));
                         if (tvm != null)
                         {
@@ -493,7 +493,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                             {
                                 Module = ModuleId.IPC_Failed,
                                 MessagePayload = $"{jmsg}",
-                                MessageText = $"💻 {jmsg.Sender}    ⌚ {jmsg.Time}",
+                                MessageText = $"💻 {jmsg.Sender}    ⌚ {jmsg.Time}    🚨 BAD PIN",
                                 MessageType = typeof(Shared.IpcMessage),
                                 MessageTime = DateTime.Now,
                             };
@@ -502,6 +502,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                                 tvm?.Messages?.RemoveAt(_maxMessages);
                         }
                     });
+
+                    SetVisualChild(layer2, _visualErr); // We're using the Compositor to swap the image, instead of the Image.Visibility trick.
                 }
             }
             else

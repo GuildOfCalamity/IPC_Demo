@@ -76,7 +76,7 @@ public class Config
 
     [JsonInclude]
     [JsonPropertyName("highlightMostActive")]
-    public bool highlightMostActive = false;
+    public bool highlightMostActive = true;
 
     [JsonInclude]
     [JsonPropertyName("activityThreshold")]

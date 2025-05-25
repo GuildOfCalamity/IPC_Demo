@@ -104,7 +104,9 @@ public class IpcHelper : IDisposable
                 }
             }
         }
+        catch (TaskCanceledException) { /* token signaled */ }
         catch (OperationCanceledException) { /* token signaled */ }
+        catch (IOException ioex) when (ioex.InnerException is SocketException) { /* client disconnected */ }
         catch (Exception ex)
         {
             ErrorOccurred?.Invoke(ex);
@@ -142,6 +144,7 @@ public class IpcHelper : IDisposable
                 ErrorOccurred?.Invoke(new Exception("Client is not connected or cancellation was requested."));
             }
         }
+        catch (TaskCanceledException) { /* token signaled */ }
         catch (OperationCanceledException) { /* token signaled */ }
         catch (IOException ioex) when (ioex.InnerException is SocketException) { /* client disconnected */ }
         catch (Exception ex)
