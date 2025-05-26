@@ -332,6 +332,14 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         if (obj == null)
             return;
 
+        if (!Shared.SecurityHelper.VerifySecureCode6(obj.Secret, _secret))
+        {
+            // Ignore messages that don't match our secret code.
+            // Will get reported in our JsonMessageReceived event if verbose rejection flag is true.
+            Debug.WriteLine($"[DEBUG] Ignoring bad PIN from '{obj.Sender}'");
+            return;
+        }
+
         _redrawNeeded = true;
         this.DispatcherQueue.TryEnqueue(() =>
         {
@@ -493,7 +501,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                             {
                                 Module = ModuleId.IPC_Failed,
                                 MessagePayload = $"{jmsg}",
-                                MessageText = $"💻 {jmsg.Sender}    ⌚ {jmsg.Time}    🚨 BAD PIN",
+                                MessageText = $"💻 {jmsg.Sender}    🔒 {jmsg.Secret}    🚨 BAD PIN!",
                                 MessageType = typeof(Shared.IpcMessage),
                                 MessageTime = DateTime.Now,
                             };
