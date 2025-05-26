@@ -106,9 +106,9 @@ public class Program
                 else
                     name = $"{Sender}";
 
-                if (RandomFaultyPIN && ipc > 10 && Random.Shared.Next(21) >= 15) // ~25% chance of PIN fail
+                if (RandomFaultyPIN && ipc > 10 && Random.Shared.Next(101) >= 90) // 10% chance of PIN fail
                 {
-                    Console.WriteLine($"📨 Sending IPC data #{ipc} with faulty PIN from '{name}' to listener at {DateTime.Now.ToLongTimeString()}");
+                    Console.WriteLine($"📨 Sending IPC data #{ipc} with faulty secret from '{name}' to listener at {DateTime.Now.ToLongTimeString()}");
                     _ipc.SendMessage("data", Shared.Data.GenerateTechnicalGibberish(Random.Shared.Next(5, 16)), $"{Secret}{AppendRandom()}", $"{name}");
                 }
                 else
