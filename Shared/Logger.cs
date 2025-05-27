@@ -17,7 +17,6 @@ public static class Logger
     static string UniqueName = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}_{DateTime.Now:yyyy-MM-dd}.log";
     static readonly BlockingCollection<string> LogCollection = new BlockingCollection<string>();
     static readonly TaskCompletionSource<string> LoggerPathCompletionSource = new TaskCompletionSource<string>();
-    static readonly TaskCompletionSource<string> NameCompletionSource = new TaskCompletionSource<string>();
     static readonly Thread BackgroundProcessThread = new Thread(LogProcessThread)
     {
         IsBackground = true,
@@ -218,6 +217,11 @@ public static class Logger
     {
         try
         {
+            if (LoggerPathCompletionSource.Task.Status != TaskStatus.RanToCompletion)
+            {   // We could throw an exception here, but we'll just set a default path for now.
+                LoggerPathCompletionSource.TrySetResult(AppDomain.CurrentDomain.BaseDirectory);
+            }
+
             using (FileStream LogFileStream = File.Open(Path.Combine(LoggerPathCompletionSource.Task.Result, UniqueName), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
             {
                 using (StreamWriter Writer = new StreamWriter(LogFileStream, Encoding.UTF8, 1024, true))
