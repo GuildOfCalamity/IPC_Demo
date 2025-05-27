@@ -37,10 +37,16 @@ public class Program
 
     static void Main(string[] args)
     {
-        int msSleep = 990;
+        int msSleep = 980;
         int totalCycles = 500;
 
         Console.OutputEncoding = Encoding.UTF8;
+
+        if (Debugger.IsAttached)
+        {
+            Console.WriteLine($"🔔 Debugger detected, enabling additional test modes (may still be overridden with switches)");
+            StressTest = RandomFaultyPIN = true;
+        }
 
         #region [Argument checks]
         // Check if we were passed a port option
@@ -106,7 +112,7 @@ public class Program
                 else
                     name = $"{Sender}";
 
-                if (RandomFaultyPIN && ipc > 10 && Random.Shared.Next(101) >= 90) // 10% chance of PIN fail
+                if (RandomFaultyPIN && ipc > 10 && Random.Shared.Next(101) >= 95) // 5% chance of PIN fail
                 {
                     Console.WriteLine($"📨 Sending IPC data #{ipc} with faulty secret from '{name}' to listener at {DateTime.Now.ToLongTimeString()}");
                     _ipc.SendMessage("data", Shared.Data.GenerateTechnicalGibberish(Random.Shared.Next(5, 16)), $"{Secret}{AppendRandom()}", $"{name}");
@@ -126,7 +132,7 @@ public class Program
         }
 
         Console.WriteLine("🔔 Test complete");
-        Thread.Sleep(1000);
+        Thread.Sleep(1500);
     }
 
     /// <summary>
