@@ -41,6 +41,7 @@ public sealed partial class PlotControl : UserControl
     bool _isDrawing = false;
     bool _sizeSet = false;
     bool _measureOccurred = false;
+    bool _warnIfNoElements = false;
     double _restingOpacity = 0.65;
     double _canvasMargin = 60;
     double _curtailMargin = 2.25;
@@ -82,7 +83,7 @@ public sealed partial class PlotControl : UserControl
         else if (!_loaded || points is null)
             return;
 
-        if (points.Count == 0)
+        if (_warnIfNoElements && points.Count == 0)
         {
             host.DispatcherQueue.TryEnqueue(() =>
             {
@@ -704,7 +705,7 @@ public sealed partial class PlotControl : UserControl
                     });
                 });
             }
-            else // empty data warning
+            else if (_warnIfNoElements) // empty data warning
             {
                 host.DispatcherQueue.TryEnqueue(() =>
                 {

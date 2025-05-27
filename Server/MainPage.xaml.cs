@@ -156,7 +156,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                 _updateGraphTimer = this.DispatcherQueue.CreateTimer();
                 _updateGraphTimer.Interval = TimeSpan.FromSeconds(10);
                 _updateGraphTimer.Tick += UpdateGraphTimerOnTick;
-                _updateGraphTimer.Start();
+                //_updateGraphTimer.Start();
             }
         }
 
@@ -174,7 +174,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         }
         else
-            asset = "Bulb54_off.png";
+            asset = "Bulb67_off.png";
         
         if (_randomAsset)
             InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 61, height: 61);
@@ -584,6 +584,27 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             return;
 
         UpdatePlotPoints();
+
+        if (_realTimePlot)
+        {
+            Debug.WriteLine($"[GraphFlyoutOpened] Starting update timer");
+            _updateGraphTimer?.Start();
+        }
+    }
+
+    /// <summary>
+    /// <see cref="Flyout"/> closed event.
+    /// </summary>
+    public void GraphFlyoutClosed(object sender, object e)
+    {
+        if (App.IsClosing)
+            return;
+
+        if (_realTimePlot)
+        {
+            Debug.WriteLine($"[GraphFlyoutClosed] Stopping update timer");
+            _updateGraphTimer?.Stop();
+        }
     }
 
     void UpdateGraphTimerOnTick(DispatcherQueueTimer sender, object args)

@@ -216,6 +216,7 @@
                         <AppBarButton.Flyout>
                             <Flyout
                                 AreOpenCloseAnimationsEnabled="True"
+                                Closed="{x:Bind GraphFlyoutClosed, Mode=OneWay}"
                                 LightDismissOverlayMode="Off"
                                 Opened="{x:Bind GraphFlyoutOpened, Mode=OneWay}"
                                 Placement="Full">
@@ -239,7 +240,7 @@
                                     PointBorderBrush="{ThemeResource GradientPointBorderBrush}"
                                     PointBrush="{ThemeResource GradientPointBrush}"
                                     PointCanvasMargin="86"
-                                    PointDelayMS="32"
+                                    PointDelayMS="20"
                                     PointGround="True"
                                     PointRadius="{x:Bind PointSize, Mode=OneWay, FallbackValue=4}"
                                     PointSource="{x:Bind Points, Mode=OneWay}"
