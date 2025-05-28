@@ -46,7 +46,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     bool _redrawNeeded = true;
     int _maxMessages = 50;
     readonly string _historyHeader = "Connection Activity";
-    readonly ObservableCollection<ApplicationMessage>? _tab1Messages;
+    List<Shared.IpcMessage>? _workingStorage = new();
     public event PropertyChangedEventHandler? PropertyChanged;
     DispatcherQueueTimer? _updateGraphTimer = null;
 
@@ -131,10 +131,13 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     if (prevMsgs is not null)
                     {
                         foreach (var msg in prevMsgs)
-                        {
-                            // Load messages as long as we aren't exceeding the limit and they're fresh.
-                            if (++count < _maxMessages && !msg.MessageTime.IsOlderThanDays(2d))
-                                _tab1Messages.Add(msg);
+                        {   // Load messages as long as we aren't exceeding the limit, and they're fresh.
+                            if (++count < _maxMessages)
+                            {
+                                var mt = msg.Time.ParseJsonDateTime();
+                                if (mt != DateTime.MinValue && !mt.IsOlderThanDays(2d))
+                                    _workingStorage?.Add(msg);
+                            }
                         }
                         Debug.WriteLine($"[INFO] {count} previous messages loaded");
                     }
@@ -156,7 +159,6 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                 _updateGraphTimer = this.DispatcherQueue.CreateTimer();
                 _updateGraphTimer.Interval = TimeSpan.FromSeconds(10);
                 _updateGraphTimer.Tick += UpdateGraphTimerOnTick;
-                //_updateGraphTimer.Start();
             }
         }
 
@@ -174,7 +176,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         }
         else
-            asset = "Bulb67_off.png";
+            asset = "Bulb68_off.png";
         
         if (_randomAsset)
             InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 61, height: 61);
@@ -263,8 +265,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             if (App.Profile.trackMessages)
             {
                 // TODO: rework saving of messages for all connections
-                if (_tab1Messages != null && _tab1Messages.Count > 1)
-                    App.MessageLog?.SaveData(_tab1Messages.ToList());
+                if (_workingStorage != null && _workingStorage.Count > 1)
+                    App.MessageLog?.SaveData(_workingStorage);
             }
 
             if (App.Profile.logging)
@@ -480,6 +482,10 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                                 UpdateInfoBar($"⚠️ Failed to locate client tab for sender '{jmsg.Sender}'", MessageLevel.Warning);
                         }
                     });
+
+                    // Message storage check
+                    if (App.Profile != null && App.Profile.trackMessages)
+                        _workingStorage?.Add(jmsg);
                 }
                 else if (_verboseRejection) // failed security check
                 {

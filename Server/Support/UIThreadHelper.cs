@@ -147,7 +147,7 @@ public static class UIThreadHelper
     /// <typeparam name="T">The type of the result returned by the asynchronous function.</typeparam>
     /// <param name="dispatcherQueue">The DispatcherQueue associated with the UI thread.</param>
     /// <param name="func">The asynchronous function to execute.</param>
-    /// <returns>A Task representing the asynchronous operation with the result of type T.</returns>
+    /// <returns>Task representing the asynchronous operation with the result of type T.</returns>
     public static async Task<T> InvokeOnUIAsync<T>(this DispatcherQueue dispatcherQueue, Func<Task<T>> func)
     {
         if (dispatcherQueue is null)
@@ -183,7 +183,7 @@ public static class UIThreadHelper
     /// </summary>
     /// <param name="dispatcherQueue">The DispatcherQueue associated with the UI thread.</param>
     /// <param name="func">The asynchronous function to execute.</param>
-    /// <returns>A Task representing the asynchronous operation.</returns>
+    /// <returns>Task representing the asynchronous operation.</returns>
     public static async Task InvokeOnUIAsync(this DispatcherQueue dispatcherQueue, Func<Task> func)
     {
         if (dispatcherQueue is null)

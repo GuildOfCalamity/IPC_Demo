@@ -70,6 +70,23 @@ public static class Extensions
     }
 
     /// <summary>
+    /// Formats a <see cref="TimeSpan"/> object representing a time of day to a 12-hour clock format with AM/PM.
+    /// </summary>
+    /// <param name="timeSpan">The <see cref="TimeSpan"/> object to format.</param>
+    /// <returns>A string representing the time in the format "h:mmtt" (e.g., "11:00AM"), or an empty string if the input is invalid.</returns>
+    /// <remarks>This can be solved simply by using <see cref="System.TimeOnly"/>, but this helper method is designed for older frameworks.</remarks>
+    public static string To12HourClock(this TimeSpan timeSpan)
+    {
+        try
+        {
+            // Use a DateTime & add the TimeSpan to the DateTime's "00:00" to get the right format.
+            DateTime dateTime = DateTime.Today + timeSpan;
+            return dateTime.ToString("h:mm tt", CultureInfo.InvariantCulture);
+        }
+        catch (Exception) { return string.Empty; }
+    }
+
+    /// <summary>
     /// Calculates the number of minutes remaining in the current hour.
     /// </summary>
     /// <returns>number of minutes remaining in the current hour</returns>
@@ -2949,7 +2966,7 @@ public static class Extensions
     public static string RemoveLastSeparator(this string input, string separator)
     {
         if (string.IsNullOrEmpty(input))
-            return input;
+            return string.Empty;
 
         int lastDelimiterIndex = input.LastIndexOf(separator);
 

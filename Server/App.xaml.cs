@@ -132,7 +132,7 @@ public partial class App : Application
     /// <summary>
     /// For saving message history from last instance.
     /// </summary>
-    public static JsonDataHelper<List<ApplicationMessage>>? MessageLog { get; set; }
+    public static JsonDataHelper<List<Shared.IpcMessage>>? MessageLog { get; set; }
 
     #endregion
 
@@ -154,6 +154,7 @@ public partial class App : Application
             DebugSettings.XamlResourceReferenceFailed += DebugOnXamlResourceReferenceFailed;
         }
         #endregion
+
 
         StopWatch = Shared.ValueStopwatch.StartNew();
         BaseFolder = AppDomain.CurrentDomain.BaseDirectory;
@@ -188,7 +189,7 @@ public partial class App : Application
         bool areWeTheRealDeal = ApiInformation.IsPropertyPresent("Microsoft.UI.Dispatching.DispatcherQueue", "HasThreadAccess");
 
         // Load previous messages, if any exist.
-        MessageLog = new JsonDataHelper<List<ApplicationMessage>>(System.IO.Path.Combine(GetCurrentDirectory(), "AppMessages.json"));
+        MessageLog = new JsonDataHelper<List<Shared.IpcMessage>>(System.IO.Path.Combine(GetCurrentDirectory(), "AppMessages.json"));
     }
 
     /// <summary>
