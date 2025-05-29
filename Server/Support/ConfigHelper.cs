@@ -71,6 +71,10 @@ public class Config
     public bool trackMessages = false;
 
     [JsonInclude]
+    [JsonPropertyName("daysUntilStale")]
+    public double daysUntilStale = 3.0;
+
+    [JsonInclude]
     [JsonPropertyName("maxMessages")]
     public int maxMessages = 50;
 

@@ -44,6 +44,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     bool _localMachineOnly = false;
     bool _verboseRejection = true;
     bool _redrawNeeded = true;
+    bool _focusNotSet = true;
     int _maxMessages = 50;
     readonly string _historyHeader = "Connection Activity";
     List<Shared.IpcMessage>? _workingStorage = new();
@@ -103,7 +104,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     {
         _vsw = Shared.ValueStopwatch.StartNew();
 
-        if (App.Profile != null && App.Profile.logging)
+        if (App.Profile!.logging)
         {
             Shared.Logger.SetLoggerFileName(App.GetCurrentAssemblyName()!);
             Shared.Logger.SetLoggerFolderPath(AppDomain.CurrentDomain.BaseDirectory);
@@ -121,8 +122,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     {
         if (!_loaded && this.Content != null)
         {
-            #region [Fetch previous messages]
-            if (App.Profile != null && App.Profile.trackMessages)
+            #region [Loading previous messages]
+            if (App.Profile!.trackMessages)
             {
                 try
                 {
@@ -131,15 +132,73 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     if (prevMsgs is not null)
                     {
                         foreach (var msg in prevMsgs)
-                        {   // Load messages as long as we aren't exceeding the limit, and they're fresh.
+                        {
+                            // Load messages as long as we aren't exceeding the limit, and they're fresh.
+                            // The max will be spread across all connections, e.g. you may end up with only
+                            // one message per tab if you remembered 50 connections.
                             if (++count < _maxMessages)
                             {
                                 var mt = msg.Time.ParseJsonDateTime();
-                                if (mt != DateTime.MinValue && !mt.IsOlderThanDays(2d))
+                                if (mt != DateTime.MinValue && !mt.IsOlderThanDays(App.Profile.daysUntilStale) && !string.IsNullOrEmpty(msg.Sender))
+                                {
                                     _workingStorage?.Add(msg);
+                                }
                             }
                         }
                         Debug.WriteLine($"[INFO] {count} previous messages loaded");
+
+                        #region [Order and populate tabs]
+                        var ordered = _workingStorage?.OrderBy(x => x.Sender).ToList();
+                        foreach (var msg in ordered)
+                        {
+                            string senderCompare = string.Empty;
+                            if (_localMachineOnly)
+                                senderCompare = Environment.MachineName;
+                            else
+                                senderCompare = msg.Sender;
+
+                            var appMsg = new ApplicationMessage
+                            {
+                                Module = ModuleId.IPC_Passed,
+                                MessagePayload = msg,
+                                MessageText = $"{msg}",
+                                MessageType = typeof(Shared.IpcMessage),
+                                MessageTime = msg.Time.ParseJsonDateTime(),
+                            };
+
+                            // Does the connection already exist?
+                            if (!Connections.Any(Connections => Connections.Header.Equals(senderCompare, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                UpdateInfoBar($"Creating new tab for '{senderCompare}'", MessageLevel.Important);
+                                var tvm = new TabItemViewModel
+                                {
+                                    Header = $"{senderCompare}",
+                                    Sender = msg.Sender,
+                                    DecaySeconds = 15, // you'll want to adjust this for stress test scenarios
+                                    Icon = SymbolIconHelper.GetRandomIcon(),
+                                };
+                                Connections.Add(tvm);
+
+                                //if (_focusNotSet && Connections.Count == 1) // only do this on the first tab creation event
+                                //{
+                                //    _focusNotSet = false;
+                                //    tvConnections.SelectedItem = tvm; // force focus to new tab
+                                //}
+
+                                tvm.Messages.Insert(0, appMsg);
+                            }
+                            else
+                            {
+                                var existing = Connections.FirstOrDefault(Connections => Connections.Header.Equals(senderCompare, StringComparison.OrdinalIgnoreCase));
+                                if (existing != null)
+                                {
+                                    existing?.Messages?.Insert(0, appMsg);
+                                    if (existing?.Messages?.Count > _maxMessages)
+                                        existing?.Messages?.RemoveAt(_maxMessages);
+                                }
+                            }
+                        }
+                        #endregion
                     }
                 }
                 catch (Exception) { UpdateInfoBar($"Failed to load previous message list.", MessageLevel.Warning); }
@@ -181,7 +240,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         if (_randomAsset)
             InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 61, height: 61);
         else
-            InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 161, height: 161);
+            InitializeVisualCompositionLayers(asset: asset.Substring(0, asset.IndexOf("_")), width: 151, height: 151);
 
         UpdateInfoBar($"Secure code for the next {Extensions.MinutesRemainingInCurrentHour()} minutes will be {workingCode}    📷 {asset.Substring(0, asset.IndexOf("_"))}", MessageLevel.Information);
         #endregion
@@ -249,7 +308,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
         _loaded = true;
 
-        if (App.Profile != null && App.Profile.logging)
+        if (App.Profile!.logging)
             Shared.Logger.Log($"{nameof(MainPage)} load took {_vsw.GetElapsedFriendly()}", "Statistics");
         else
             Debug.WriteLine($"[DEBUG] {nameof(MainPage)} load took {_vsw.GetElapsedFriendly()}");
@@ -260,20 +319,17 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         ipcServer?.Stop();
         _updateGraphTimer?.Stop();
 
-        if (App.Profile != null)
+        if (App.Profile!.trackMessages)
         {
-            if (App.Profile.trackMessages)
-            {
-                // TODO: rework saving of messages for all connections
-                if (_workingStorage != null && _workingStorage.Count > 1)
-                    App.MessageLog?.SaveData(_workingStorage);
-            }
+            // These will be sorted on next application startup.
+            if (_workingStorage != null && _workingStorage.Count > 1)
+                App.MessageLog?.SaveData(_workingStorage);
+        }
 
-            if (App.Profile.logging)
-            {
-                Shared.Logger.Log($"Application instance ran for {_vsw.GetElapsedFriendly()}", "Statistics");
-                Shared.Logger.ConfirmLogIsFlushed(2000);
-            }
+        if (App.Profile!.logging)
+        {
+            Shared.Logger.Log($"Application instance ran for {_vsw.GetElapsedFriendly()}", "Statistics");
+            Shared.Logger.ConfirmLogIsFlushed(2000);
         }
     }
 
@@ -319,7 +375,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             Debug.WriteLine($"[ERROR] {msg}");
         }
 
-        if (App.Profile != null && App.Profile.logging)
+        if (App.Profile!.logging)
             Shared.Logger.Log(msg, "IpcServer");
     }
 
@@ -356,7 +412,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     Sender = obj.Sender,
                     Icon = new SymbolIconSource { Symbol = Symbol.ZeroBars },
                 };
-                Connections.Add(histo);
+                //Connections.Add(histo);
+                Connections.Insert(0, histo);
             }
 
             var tvm = Connections.FirstOrDefault(Connections => Connections.Header.Equals(_historyHeader, StringComparison.OrdinalIgnoreCase));
@@ -378,8 +435,11 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                         tvm?.Messages?.RemoveAt(_maxMessages);
                 }
 
-                if (Connections.Count == 1) // only do this on the first tab creation event
-                    tvConnections.SelectedItem = tvm; // force focus to new tab
+                if (_focusNotSet)
+                {
+                    _focusNotSet = false;
+                    tvConnections.SelectedItem = tvm; // force focus to connections history tab
+                }
             }
             #endregion
         });
@@ -440,6 +500,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                         // Does the connection already exist?
                         if (!Connections.Any(Connections => Connections.Header.Equals(senderCompare, StringComparison.OrdinalIgnoreCase)))
                         {
+                            // Tabs are created in the order they are received. If you have trackMessages
+                            // enabled then the tabs will be sorted when the application is reloaded.
                             UpdateInfoBar($"Creating new tab for '{senderCompare}'", MessageLevel.Important);
                             var tvm = new TabItemViewModel
                             {
@@ -450,8 +512,11 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                             };
                             Connections.Add(tvm);
 
-                            if (Connections.Count == 1) // only do this on the first tab creation event
+                            if (_focusNotSet && Connections.Count == 1) // only do this on the first tab creation event
+                            {
+                                _focusNotSet = false;
                                 tvConnections.SelectedItem = tvm; // force focus to new tab
+                            }
 
                             tvm.Messages.Insert(0, appMsg);
 
@@ -472,7 +537,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                                     existing?.Messages?.RemoveAt(_maxMessages);
 
                                 // Modify the color on the tab who's most active
-                                if (App.Profile != null && App.Profile.highlightMostActive)
+                                if (App.Profile!.highlightMostActive)
                                 {
                                     existing?.RegisterActivity();
                                     CheckForMoreActiveClientWide(existing, App.Profile.activityThreshold);
@@ -484,7 +549,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     });
 
                     // Message storage check
-                    if (App.Profile != null && App.Profile.trackMessages)
+                    if (App.Profile!.trackMessages)
                         _workingStorage?.Add(jmsg);
                 }
                 else if (_verboseRejection) // failed security check
@@ -492,7 +557,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
                     /** 
                      **  You'll want to add some form of protection to prevent intentional/malicious hammering.
                      **/
-                    if (App.Profile != null && App.Profile.logging)
+                    if (App.Profile!.logging)
                         Shared.Logger.Log($"Failed security check for sender '{jmsg.Sender}'", "Security");
 
                     // Add to our connection history tab (we may want to create a rejects tab in the future)
@@ -522,7 +587,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
             else
             {
-                if (App.Profile != null && App.Profile.logging)
+                if (App.Profile!.logging)
                     Shared.Logger.Log($"Disallowed/Unknown sender '{jmsg.Sender}'", "Security");
                 else
                     Debug.WriteLine($"⚠ Disallowed/Unknown sender '{jmsg.Sender}'");

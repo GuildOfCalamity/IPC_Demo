@@ -78,7 +78,7 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         {
             this.ExtendsContentIntoTitleBar = true;
             //this.AppWindow.DefaultTitleBarShouldMatchAppModeTheme = true;
-            if (App.Profile != null && App.Profile.transparency)
+            if (App.Profile!.transparency)
             {
                 CustomTitleBar.Height = 0d;
                 this.AppWindow.TitleBar.PreferredHeightOption = Microsoft.UI.Windowing.TitleBarHeightOption.Collapsed;
@@ -89,7 +89,7 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         #region [Transparency]
-        if (App.Profile != null && App.Profile.transparency)
+        if (App.Profile!.transparency)
         {
             Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
             WinExStyle |= WINDOW_EX_STYLE.WS_EX_LAYERED; // We'll use WS_EX_LAYERED, not WS_EX_TRANSPARENT, for the effect.

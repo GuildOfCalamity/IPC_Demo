@@ -55,10 +55,10 @@ public static class Extensions
 
     public static string AsOneLine(this Exception ex, string spacer = " ⇒ ", string header = "[EXCEPTION]")
     {
-        string result = header;
+        StringBuilder sb = new StringBuilder($"{header}");
         var exSplit = $"{ex}".Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Select((line) => $"{spacer}{line.Trim()}").ToArray();
-        foreach (var item in exSplit) { result += $"{item}"; }
-        return result;
+        foreach (var item in exSplit) { sb.Append($"{item}"); }
+        return $"{sb}";
     }
 
     public static bool ContainsUnicode(this string text)
@@ -147,7 +147,7 @@ public static class Extensions
     public static string FormatEndPoint(EndPoint? endPoint)
     {
         if (endPoint == null)
-            return "Invalid endpoint format";
+            return "Invalid endpoint object";
         try
         {
             string ipAddressString = endPoint.AddressFamily == AddressFamily.InterNetworkV6 ? ((IPEndPoint)endPoint).Address.ToString() : ((IPEndPoint)endPoint).Address.ToString();

@@ -798,7 +798,10 @@ public partial class App : Application
     {
         Debug.WriteLine($"[ERROR] First chance exception from {sender?.GetType()}: {e.Exception.Message}");
         // Ignore profile encryption property tests and fake ItemsSourceProperty binding warnings.
-        if (!string.IsNullOrEmpty(e.Exception.Message) && !e.Exception.Message.Contains("The input is not a valid Base-64 string") && !e.Exception.Message.Contains("'WinRT.IInspectable' to type 'System.String'"))
+        if (!string.IsNullOrEmpty(e.Exception.Message) &&
+            !e.Exception.Message.Contains("The operation was canceled") && // IpcHelper socket shutdowns
+            !e.Exception.Message.Contains("The input is not a valid Base-64 string") &&
+            !e.Exception.Message.Contains("'WinRT.IInspectable' to type 'System.String'"))
         {
             DebugLog($"First chance exception from {sender?.GetType()}: {e.Exception.Message}");
             if (e.Exception.InnerException != null)
