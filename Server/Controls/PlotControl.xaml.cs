@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -754,6 +754,7 @@ public sealed partial class PlotControl : UserControl
 
             ttValue.Text = $"{item.Title}{Environment.NewLine}Count: {item.Amount}{Environment.NewLine}Score: {item.Score}";
 
+
             ttPlot.PlacementTarget = rect;
             // Setting the placement rectangle is important when using code-behind
             ttPlot.PlacementRect = new Windows.Foundation.Rect(position.X, position.Y, 280, 70);
@@ -762,6 +763,20 @@ public sealed partial class PlotControl : UserControl
             ttPlot.VerticalOffset = PointRadius <= 10 ? PointRadius : PointRadius / 2;   // Y offset from mouse
             ttPlot.Visibility = Visibility.Visible;
             //Debug.WriteLine($"[INFO] TooltipWidth={ttPlot.ActualWidth:N0}  TooltipHeight={ttPlot.ActualHeight:N0}");
+
+            #region [Fix for updating the Flyout content tooltip does not appear]
+            /*
+                Flyouts are disconnected popups (separate visual trees).
+                ToolTips rely on PointerEntered → PointerMoved → PointerHover → ToolTip lifecycle.
+                Replacing content resets internal hit-test tree, but mouse isn't re-entering physically.
+            */
+            ToolTipService.SetToolTip(host, ttPlot);
+
+            /* Nudge the pointer position slightly did not work:
+                var p = e.GetCurrentPoint((UIElement)sender).Position;
+                Microsoft.UI.Xaml.Window.Current.CoreWindow.PointerPosition = new Windows.Foundation.Point(p.X + 0.01, p.Y);
+            */
+            #endregion
 
             #region [Animation]
             if (_opacityInStoryboard == null)
