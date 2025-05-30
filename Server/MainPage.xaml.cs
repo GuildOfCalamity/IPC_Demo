@@ -312,6 +312,9 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             Shared.Logger.Log($"{nameof(MainPage)} load took {_vsw.GetElapsedFriendly()}", "Statistics");
         else
             Debug.WriteLine($"[DEBUG] {nameof(MainPage)} load took {_vsw.GetElapsedFriendly()}");
+
+        // Typically C:\Users\<ProfileName>\AppData\Local\Temp
+        var allowedTempPath = App.MachineEnvironment["TMP"] ?? App.MachineEnvironment["TEMP"];
     }
 
     void IpcPageOnUnloaded(object sender, RoutedEventArgs e)
@@ -622,6 +625,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// </summary>
     void MyTabView_TabDragCompleted(TabView sender, TabViewTabDragCompletedEventArgs args)
     {
+        //TabItemViewModel? tivm = GetSelectedTabContext(args.Tab);
+
         // Force UI collection to sync after drag
         if (sender.TabItemsSource is ObservableCollection<TabItemViewModel> collection)
         {
@@ -1272,6 +1277,18 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
         return pngFiles[Random.Shared.Next(pngFiles.Count)];
     }
+
+    /// <summary>
+    /// Moves the user's mouse pointer by the specified amounts.
+    /// </summary>
+    /// <param name="Xamount">the left/right amount to move</param>
+    /// <param name="Yamount">the up/down amount to move</param>
+    void AdjustCurrentMousePosition(int Xamount, int Yamount)
+    {
+        if (NativeMethods.GetCursorPos(out Windows.Graphics.PointInt32 pnt32) == 1)
+            NativeMethods.SetCursorPos(pnt32.X + Xamount, pnt32.Y + Yamount);
+
+    }
     #endregion
 
     #region [Dragging]
@@ -1285,7 +1302,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             windowStartX = MainWindow.appW.Position.X;
             windowStartY = MainWindow.appW.Position.Y;
             Windows.Graphics.PointInt32 pt;
-            NativeMethods.GetCursorPos(out pt); // user32.dll
+            NativeMethods.GetCursorPos(out pt);
             initialPointerX = pt.X;
             initialPointerY = pt.Y;
             isMoving = true;

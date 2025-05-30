@@ -18,6 +18,7 @@ using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace IPC_Demo.Controls;
 
@@ -735,7 +736,7 @@ public sealed partial class PlotControl : UserControl
 
             GeneralTransform transform = rect.TransformToVisual(this); // "cvsPlot", or "root" grid, or "this" if it's a Page/UserControl
             Windows.Foundation.Point position = transform.TransformPoint(new Windows.Foundation.Point(rect.Width / 2, rect.Height / 2)); // Center of the circle
-                                                                                                                                         //Debug.WriteLine($"[INFO] Position data is X={position.X:N0}, Y={position.Y:N0}");
+            //Debug.WriteLine($"[INFO] Position data is X={position.X:N0}, Y={position.Y:N0}");
 
             var item = (GraphItem)rect.Tag;
 
@@ -767,15 +768,10 @@ public sealed partial class PlotControl : UserControl
             #region [Fix for updating the Flyout content tooltip does not appear]
             /*
                 Flyouts are disconnected popups (separate visual trees).
-                ToolTips rely on PointerEntered → PointerMoved → PointerHover → ToolTip lifecycle.
+                ToolTips rely on PointerEntered ⇨ PointerMoved ⇨ PointerHover ⇨ ToolTip lifecycle.
                 Replacing content resets internal hit-test tree, but mouse isn't re-entering physically.
             */
             ToolTipService.SetToolTip(host, ttPlot);
-
-            /* Nudge the pointer position slightly did not work:
-                var p = e.GetCurrentPoint((UIElement)sender).Position;
-                Microsoft.UI.Xaml.Window.Current.CoreWindow.PointerPosition = new Windows.Foundation.Point(p.X + 0.01, p.Y);
-            */
             #endregion
 
             #region [Animation]

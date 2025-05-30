@@ -340,10 +340,10 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     internal static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
-    [DllImport("user32")]
+    [DllImport("user32.dll")]
     internal static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
 
-    [DllImport("user32")]
+    [DllImport("user32.dll")]
     internal static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
     [DllImport("user32.dll")]
@@ -352,10 +352,10 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     public static extern bool AllowSetForegroundWindow(int dwProcessId);
 
-    [DllImport("User32.dll")]
+    [DllImport("user32.dll")]
     public static extern bool ShowWindow(IntPtr handle, int nCmdShow);
 
-    [DllImport("User32.dll")]
+    [DllImport("user32.dll")]
     public static extern bool IsIconic(IntPtr handle);
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -385,7 +385,7 @@ internal static class NativeMethods
     [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall, SetLastError = true)]
     internal static extern short GetAsyncKeyState(int vKey);
 
-    [DllImport("user32.DLL", CharSet = CharSet.Unicode)]
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     internal static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string lpszClass, string lpszWindow);
 
     [DllImport("user32.dll")]
@@ -411,6 +411,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
     public static extern int GetCursorPos(out Windows.Graphics.PointInt32 lpPoint);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetCursorPos(int X, int Y);
 
     public static string[] CommandLineToArgvW(string cmdLine)
     {
