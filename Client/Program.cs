@@ -37,7 +37,7 @@ public class Program
 
     static void Main(string[] args)
     {
-        int msSleep = 980;
+        int msSleep = 950;
         int totalCycles = 500;
 
         Console.OutputEncoding = Encoding.UTF8;
